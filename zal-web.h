@@ -18,7 +18,8 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
   Napi::Value SetProperty(const Napi::CallbackInfo& info);
 
   Hlib::IDictionary * m_pDictionary { nullptr };
-  HLib::ILexemeEnumerator * m_pLexemeEnumerator { nullptr };
+  Hlib::ILexemeEnumerator * m_pLexemeEnumerator { nullptr };
+  Hlib::ILexeme * m_pCurrentLexeme { nullptr };
 
 };
 
