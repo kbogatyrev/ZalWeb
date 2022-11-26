@@ -12,6 +12,7 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
   Napi::Function func =
       DefineClass(env, "ZalWeb", { InstanceMethod("setDbPath", &ZalWeb::SetDbPath),
                                    InstanceMethod("getLexemesByInitialForm", &ZalWeb::GetLexemesByInitialForm),
+                                   InstanceMethod("loadNextLexeme", &ZalWeb::LoadNextLexeme),
                                    InstanceMethod("setProperty", &ZalWeb::SetProperty),
                                    InstanceMethod("getProperty", &ZalWeb::GetProperty) });
   Napi::FunctionReference* constructor = new Napi::FunctionReference();
@@ -20,6 +21,56 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
   exports.Set("ZalWeb", func);
   return exports;
 }
+
+//
+//  Property handlers
+//
+fnHandler fHomonyms = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+{ 
+  if (stProps.vecHomonyms.size() > 0) {
+    Napi::Int32Array arrHomonyms = Napi::Int32Array::New(info.Env(), stProps.vecHomonyms.size());
+    for (auto itHomonym = stProps.vecHomonyms.begin(); 
+         itHomonym != stProps.vecHomonyms.end();
+         ++itHomonym) 
+    {
+      arrHomonyms[(size_t)(itHomonym-stProps.vecHomonyms.begin())] = *itHomonym;
+    }
+    return arrHomonyms;
+  } else {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+};
+
+fnHandler fContexts = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+{
+  if (stProps.sContexts.uiLength() > 0) {
+    Napi::String sContexts = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sContexts));
+    return sContexts;
+  } else {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+};
+
+fnHandler fHeadwordVariant = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+{
+  if (stProps.sHeadwordVariant.uiLength() > 0) {
+    Napi::String sHeadwordVariant = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordVariant));
+    return sHeadwordVariant;
+  } else {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+};
+
+fnHandler fSpryazhSm = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), stProps.bSpryazhSm);
+};
+
+fnHandler fMainSymbol = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+{
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sMainSymbol));
+};
+
 
 ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info) 
 {
@@ -32,6 +83,13 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
 
   //Napi::Number value = info[0].As<Napi::Number>();
   //this->value_ = value.DoubleValue();
+
+  m_mapKeyToPropHandler["homonyms"] = fHomonyms;
+  m_mapKeyToPropHandler["contexts"] = fContexts;
+  m_mapKeyToPropHandler["headwordVariant"] = fHeadwordVariant;
+  m_mapKeyToPropHandler["spryazhSm"] = fSpryazhSm;
+  m_mapKeyToPropHandler["mainSymbol"] = fMainSymbol;
+
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
@@ -99,7 +157,11 @@ Napi::Value ZalWeb::GetLexemesByInitialForm(const Napi::CallbackInfo& info)
     auto sSearchWord = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
     auto rc = m_pDictionary->eGetLexemesByInitialForm(sSearchWord);
     if (rc != Hlib::H_NO_MORE && rc != Hlib::H_FALSE) {
-      std::cout << "------------- Lexeme not found.\n";
+       Napi::TypeError::New(env, "Unable to create lexeme enumerator.")
+          .ThrowAsJavaScriptException();
+    }
+
+    if (Hlib::H_FALSE == rc) {
       return Napi::Boolean::New(info.Env(), false);
     }
 
@@ -133,12 +195,6 @@ Napi::Value ZalWeb::SetProperty(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);   
   }
   else {
-    auto kiki1 = info[0].As<Napi::String>();
-    auto kiki2 = info[1].As<Napi::String>();
-
-    std::cout << "------------- " << kiki1.Utf8Value() << std::endl;
-    std::cout << "              " << kiki2.Utf8Value() << std::endl;
-
     return Napi::Boolean::New(info.Env(), true);
   }
 }
@@ -154,72 +210,22 @@ Napi::Value ZalWeb::GetProperty(const Napi::CallbackInfo& info)
     Napi::TypeError::New(info.Env(), "Lexeme pointer is NULL.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
+
   auto stLexemeProperties = m_pCurrentLexeme->stGetProperties();
+  auto sKey = info[0].As<Napi::String>().Utf8Value();
 
-  auto sKey = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
+//  auto itProperty = m_mapStringToProperty.find(sKey);
+//  if (m_mapStringToProperty.end() == itProperty) {
+//    Napi::TypeError::New(info.Env(), "Property not found.").ThrowAsJavaScriptException();
+//    return Napi::Boolean::New(info.Env(), false);   
+//  }
 
-  // homonyms
-  if (L"homonyms" == sKey) {
-    if (stLexemeProperties.vecHomonyms.size() > 0) {
-      Napi::Int32Array arrHomonyms = Napi::Int32Array::New(info.Env(), stLexemeProperties.vecHomonyms.size());
-      for (auto itHomonym = stLexemeProperties.vecHomonyms.begin(); 
-           itHomonym != stLexemeProperties.vecHomonyms.end();
-           ++itHomonym) {
-          arrHomonyms[(size_t)(itHomonym-stLexemeProperties.vecHomonyms.begin())] = *itHomonym;
-      }
-      return arrHomonyms;
-    } else {
-      return Napi::Boolean::New(info.Env(), false);
-    }
+  auto itProperty = m_mapKeyToPropHandler.find(sKey);
+  if (m_mapKeyToPropHandler.end() == itProperty) {
+    std::cout << "ERROR: property " << sKey << " not found.\n";
+    return Napi::Boolean::New(info.Env(), false);
   }
 
-  // contexts
-  if (L"contexts" == sKey) {
-    if (stLexemeProperties.sContexts.uiLength() > 0) {
-      Napi::String sContexts = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stLexemeProperties.sContexts));
-      return sContexts;
-    } else {
-      return Napi::Boolean::New(info.Env(), false);
-    }
-  }
+  return itProperty->second(info, stLexemeProperties);
 
-  // headword variant
-  if (L"headwordVariant" == sKey) {
-    if (stLexemeProperties.sHeadwordVariant.uiLength() > 0) {
-      Napi::String sHeadwordVariant = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stLexemeProperties.sHeadwordVariant));
-      return sHeadwordVariant;
-    } else {
-      return Napi::Boolean::New(info.Env(), false);
-    }
-  }
-
-  // spryazh. sm.
-  if (L"spryazhSm" == sKey) {
-    return Napi::Boolean::New(info.Env(), stLexemeProperties.bSpryazhSm);
-  }
-
-  return Napi::Boolean::New(info.Env(), true);
 }
-
-//Napi::Value ZalWeb::PlusOne(const Napi::CallbackInfo& info) 
-//{
-//  this->value_ = this->value_ + 1;
-//  return ZalWeb::GetValue(info);
-//}
-
-/*
-Napi::Value ZalWeb::Multiply(const Napi::CallbackInfo& info) 
-{
-  Napi::Number multiple;
-  if (info.Length() <= 0 || !info[0].IsNumber()) {
-    multiple = Napi::Number::New(info.Env(), 1);
-  } else {
-    multiple = info[0].As<Napi::Number>();
-  }
-
-  Napi::Object obj = info.Env().GetInstanceData<Napi::FunctionReference>()->New(
-      {Napi::Number::New(info.Env(), this->value_ * multiple.DoubleValue())});
-
-  return obj;
-}
-*/
