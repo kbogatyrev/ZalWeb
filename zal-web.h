@@ -3,50 +3,26 @@
 
 #include <map>
 #include <functional>
-
 #include <napi.h>
-
 #include "Dictionary.h"
 
-enum class LexemeProperties {
-  sourceForm,
-  homonyms,
-  contexts,
-  spryazhSm,
-  mainSymbol,
-  inflectionSymbol,
-  inflectionType,
-  accentType1,
-  accentType2,
-  comment,
-  aspectPair,
-  altAspectPair,
-  headwordComment,
-  pluralOf,
-  usage,
-  seeRef,
-  stemAugment,
-  trailingComment,
-  restrictedContexts,
-  commonDeviations,
-  section,
-  hasFleetingVowel,
-  hasYoAlternation,
-  noComparative,
-  assumedPlForms,
-  assumedShortPl,
-  hasIrregularForms,
-  hasIrregularVariants,
-  shortFormsRestricted,
-  shortFormsIncomplete,
-  noLongForms,
-  pastParticipleRestricted,
-  noPassivePastParticiple,
-  difficultForms,
-  secondPart
-};
+using fnHandler = std::function<Napi::Value(const Napi::CallbackInfo& info, Hlib::ILexeme *)>;
 
-using fnHandler = std::function<Napi::Value(const Napi::CallbackInfo& info, Hlib::StLexemeProperties&)>;
+static std::map<Hlib::ET_AccentType, std::string> MapAccentTypeToString {
+  { Hlib::ET_AccentType::AT_A, "a" },
+  { Hlib::ET_AccentType::AT_A1, "a'" },
+  { Hlib::ET_AccentType::AT_B, "b" },
+  { Hlib::ET_AccentType::AT_B1, "b'" },
+  { Hlib::ET_AccentType::AT_C, "c" },
+  { Hlib::ET_AccentType::AT_C1, "c'" },
+  { Hlib::ET_AccentType::AT_C2, "c''" },
+  { Hlib::ET_AccentType::AT_D, "d" },
+  { Hlib::ET_AccentType::AT_D1, "d'" },
+  { Hlib::ET_AccentType::AT_E, "e" },
+  { Hlib::ET_AccentType::AT_F, "f" },
+  { Hlib::ET_AccentType::AT_F1, "f'" },
+  { Hlib::ET_AccentType::AT_F2, "f''" }
+};
 
 
 class ZalWeb : public Napi::ObjectWrap<ZalWeb> {

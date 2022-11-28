@@ -1,4 +1,5 @@
 #include <iostream>
+#include "Enums.h"
 #include "EString.h"
 #include "zal-web.h"
 
@@ -25,8 +26,9 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
 //
 //  Property handlers
 //
-fnHandler fHomonyms = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+fnHandler fnHomonyms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
 { 
+  auto& stProps = pLexeme->stGetProperties();
   if (stProps.vecHomonyms.size() > 0) {
     Napi::Int32Array arrHomonyms = Napi::Int32Array::New(info.Env(), stProps.vecHomonyms.size());
     for (auto itHomonym = stProps.vecHomonyms.begin(); 
@@ -41,8 +43,9 @@ fnHandler fHomonyms = [](const Napi::CallbackInfo& info, Hlib::StLexemePropertie
   }
 };
 
-fnHandler fContexts = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+fnHandler fnContexts = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
 {
+  auto& stProps = pLexeme->stGetProperties();
   if (stProps.sContexts.uiLength() > 0) {
     Napi::String sContexts = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sContexts));
     return sContexts;
@@ -51,8 +54,9 @@ fnHandler fContexts = [](const Napi::CallbackInfo& info, Hlib::StLexemePropertie
   }
 };
 
-fnHandler fHeadwordVariant = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+fnHandler fnHeadwordVariant = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
 {
+  auto& stProps = pLexeme->stGetProperties();
   if (stProps.sHeadwordVariant.uiLength() > 0) {
     Napi::String sHeadwordVariant = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordVariant));
     return sHeadwordVariant;
@@ -61,16 +65,135 @@ fnHandler fHeadwordVariant = [](const Napi::CallbackInfo& info, Hlib::StLexemePr
   }
 };
 
-fnHandler fSpryazhSm = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+fnHandler fnSpryazhSm = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), stProps.bSpryazhSm);
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bSpryazhSm);
 };
 
-fnHandler fMainSymbol = [](const Napi::CallbackInfo& info, Hlib::StLexemeProperties& stProps) -> Napi::Value 
+fnHandler fnMainSymbol = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
 {
-    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sMainSymbol));
+  auto& stProps = pLexeme->stGetProperties();
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sMainSymbol));
 };
 
+fnHandler fnInflectionSymbol = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  auto& stProps = pLexeme->stGetProperties();
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sInflectionType));
+};
+
+fnHandler fnInflectionType = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Number::New(info.Env(), pLexeme->stGetProperties().iType);
+};
+
+fnHandler fnAccentType1 = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  auto eAt1 = pLexeme->stGetProperties().eAccentType1;
+  auto itAt1String = MapAccentTypeToString.find(eAt1);
+  if (itAt1String == MapAccentTypeToString.end()) {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  std::string strAt1 = itAt1String->second;  
+  return Napi::String::New(info.Env(), strAt1);
+};
+
+fnHandler fnAccentType2 = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  auto eAt2 = pLexeme->stGetProperties().eAccentType2;
+  auto itAt2String = MapAccentTypeToString.find(eAt2);
+  if (itAt2String == MapAccentTypeToString.end()) {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  std::string strAt2 = itAt2String->second;  
+  return Napi::String::New(info.Env(), strAt2);
+};
+
+fnHandler fnComment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sComment));
+};
+
+fnHandler fnAspectPair = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  Hlib::CEString sAspectPair;
+  int iStressPos = -1;
+  auto rc = pLexeme->eGetAspectPair(sAspectPair, iStressPos);
+  if (Hlib::H_NO_ERROR == rc) {
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sAspectPair));
+  } else {
+    return Napi::Boolean::New(info.Env(), false);    
+  }
+};
+
+fnHandler fnAltAspectPair = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  Hlib::CEString sAltAspectPair;
+  int iStressPos = -1;
+  auto rc = pLexeme->eGetAltAspectPair(sAltAspectPair, iStressPos);
+  if (Hlib::H_NO_ERROR == rc) {
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sAltAspectPair));
+  } else {
+    return Napi::Boolean::New(info.Env(), false);    
+  }
+};
+
+fnHandler fnHeadwordComment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  auto& stProps = pLexeme->stGetProperties();
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordComment));
+};
+
+fnHandler fnIsPluralOf = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bIsPluralOf);
+};
+
+fnHandler fnPluralOf = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sPluralOf));
+};
+
+fnHandler fnUsage = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sUsage));
+};
+
+fnHandler fnSeeRef = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sSeeRef));
+};
+
+fnHandler fnStemAugment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::Number::New(info.Env(), pLexeme->stGetProperties().iStemAugment);
+};
+
+fnHandler fnTrailingComment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sTrailingComment));
+};
+
+fnHandler fnRestrictedContexts = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sRestrictedContexts));
+};
+
+fnHandler fnCommonDeviations = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+  auto& stProps = pLexeme->stGetProperties();
+  Napi::Int32Array arrCommonDeviations = Napi::Int32Array::New(info.Env(), 2*stProps.mapCommonDeviations.size());
+  int iSize {0};
+  for (auto& pairDeviation : stProps.mapCommonDeviations) {
+    arrCommonDeviations[iSize++] = pairDeviation.first;
+    arrCommonDeviations[iSize++] = pairDeviation.second;
+  }
+  if (iSize > 0) {
+    return arrCommonDeviations;    
+  } else {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+};
 
 ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info) 
 {
@@ -84,12 +207,25 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   //Napi::Number value = info[0].As<Napi::Number>();
   //this->value_ = value.DoubleValue();
 
-  m_mapKeyToPropHandler["homonyms"] = fHomonyms;
-  m_mapKeyToPropHandler["contexts"] = fContexts;
-  m_mapKeyToPropHandler["headwordVariant"] = fHeadwordVariant;
-  m_mapKeyToPropHandler["spryazhSm"] = fSpryazhSm;
-  m_mapKeyToPropHandler["mainSymbol"] = fMainSymbol;
-
+  m_mapKeyToPropHandler["homonyms"] = fnHomonyms;
+  m_mapKeyToPropHandler["contexts"] = fnContexts;
+  m_mapKeyToPropHandler["headwordVariant"] = fnHeadwordVariant;
+  m_mapKeyToPropHandler["spryazhSm"] = fnSpryazhSm;
+  m_mapKeyToPropHandler["mainSymbol"] = fnMainSymbol;
+  m_mapKeyToPropHandler["inflectionSymbol"] = fnInflectionSymbol;
+  m_mapKeyToPropHandler["inflectionType"] = fnInflectionType;
+  m_mapKeyToPropHandler["accentType1"] = fnAccentType1;
+  m_mapKeyToPropHandler["accentType2"] = fnAccentType2;
+  m_mapKeyToPropHandler["comment"] = fnComment;
+  m_mapKeyToPropHandler["aspectPair"] = fnAspectPair;
+  m_mapKeyToPropHandler["altAspectPair"] = fnAltAspectPair;
+  m_mapKeyToPropHandler["isPluralOf"] = fnIsPluralOf;
+  m_mapKeyToPropHandler["pluralOf"] = fnIsPluralOf;
+  m_mapKeyToPropHandler["usage"] = fnUsage;
+  m_mapKeyToPropHandler["seeRef"] = fnUsage;
+  m_mapKeyToPropHandler["stemAugment"] = fnStemAugment;
+  m_mapKeyToPropHandler["trailingComment"] = fnTrailingComment;
+  m_mapKeyToPropHandler["restrictedContexts"] = fnRestrictedContexts;
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
@@ -226,6 +362,6 @@ Napi::Value ZalWeb::GetProperty(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  return itProperty->second(info, stLexemeProperties);
+  return itProperty->second(info, m_pCurrentLexeme);
 
 }
