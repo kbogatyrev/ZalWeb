@@ -195,6 +195,76 @@ fnHandler fnCommonDeviations = [](const Napi::CallbackInfo& info, Hlib::ILexeme 
   }
 };
 
+fnHandler fnSection = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Number::New(info.Env(), pLexeme->stGetProperties().iSection);
+};
+
+fnHandler fnFleetingVowel = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bFleetingVowel);
+};
+
+fnHandler fnHasYoAlternation = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bYoAlternation);
+};
+
+fnHandler fnNoComparative = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bNoComparative);
+};
+
+fnHandler fnAssumedForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bAssumedForms);
+};
+
+fnHandler fnHasIrregularForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bHasIrregularForms);
+};
+
+fnHandler fnHasIrregularVariants = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bHasIrregularVariants);
+};
+
+fnHandler fnShortFormsRestricted = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bShortFormsRestricted);
+};
+
+fnHandler fnShortFormsIncomplete = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bShortFormsIncomplete);
+};
+
+fnHandler fnNoLongForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bNoLongForms);
+};
+
+fnHandler fnPastParticipleRestricted = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bPastParticipleRestricted);
+};
+
+fnHandler fnNoPassivePastParticiple = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bNoPassivePastParticiple);
+};
+
+fnHandler fnDifficultForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bHasDifficultForms);
+};
+
+fnHandler fnSecondPart = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), pLexeme->bIsSecondPart());
+};
+
 ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info) 
 {
 //  Napi::Env env = info.Env();
@@ -226,6 +296,20 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToPropHandler["stemAugment"] = fnStemAugment;
   m_mapKeyToPropHandler["trailingComment"] = fnTrailingComment;
   m_mapKeyToPropHandler["restrictedContexts"] = fnRestrictedContexts;
+  m_mapKeyToPropHandler["section"] = fnSection;
+  m_mapKeyToPropHandler["fleetingVowel"] = fnFleetingVowel;
+  m_mapKeyToPropHandler["hasYoAlternation"] = fnHasYoAlternation;
+  m_mapKeyToPropHandler["noComparative"] = fnNoComparative;
+  m_mapKeyToPropHandler["assumedForms"] = fnAssumedForms;
+  m_mapKeyToPropHandler["hasIrregularForms"] = fnHasIrregularForms;
+  m_mapKeyToPropHandler["hasIrregularVariants"] = fnHasIrregularVariants;
+  m_mapKeyToPropHandler["shortFormsRestricted"] = fnShortFormsRestricted;
+  m_mapKeyToPropHandler["shortFormsIncomplete"] = fnShortFormsIncomplete;
+  m_mapKeyToPropHandler["noLongForms"] = fnNoLongForms;
+  m_mapKeyToPropHandler["pastParticipleRestricted"] = fnPastParticipleRestricted;
+  m_mapKeyToPropHandler["noPassivePastParticiple"] = fnNoPassivePastParticiple;
+  m_mapKeyToPropHandler["difficultForms"] = fnDifficultForms;
+  m_mapKeyToPropHandler["secondPart"] = fnSecondPart;
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
