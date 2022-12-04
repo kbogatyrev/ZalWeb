@@ -4,8 +4,8 @@
       'target_name': 'addon',
       'sources': [ "addon.cc", "zal-web.cc"],
       'include_dirs': ["<!@(node -p \"require('node-addon-api').include\")",
-        "../Zal-Core/HLib",
-        "../Zal-Core/MainLib"
+        "../.vs/Zal-Core/HLib",
+        "../.vs/Zal-Core/MainLib"
       ],
       'libraries': [ '/usr/lib/libZalMainLib.so' ],
       'dependencies': ["<!(node -p \"require('node-addon-api').gyp\")"],

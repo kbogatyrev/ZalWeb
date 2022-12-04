@@ -26,6 +26,20 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
 //
 //  Property handlers
 //
+fnHandler fnSourceForm = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+{ 
+  Hlib::CEString sSource;
+  bool bIsVariant = false;
+  auto rc = pLexeme->eGetSourceFormWithDiacritics(sSource, bIsVariant);
+  if (rc != Hlib::H_NO_ERROR) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve source form.")
+      .ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sSource));
+};
+
 fnHandler fnHomonyms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
 { 
   auto& stProps = pLexeme->stGetProperties();
@@ -200,7 +214,7 @@ fnHandler fnSection = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme
     return Napi::Number::New(info.Env(), pLexeme->stGetProperties().iSection);
 };
 
-fnHandler fnFleetingVowel = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnHandler fnHasFleetingVowel = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
 {
     return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bFleetingVowel);
 };
@@ -277,6 +291,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   //Napi::Number value = info[0].As<Napi::Number>();
   //this->value_ = value.DoubleValue();
 
+  m_mapKeyToPropHandler["sourceForm"] = fnSourceForm;
   m_mapKeyToPropHandler["homonyms"] = fnHomonyms;
   m_mapKeyToPropHandler["contexts"] = fnContexts;
   m_mapKeyToPropHandler["headwordVariant"] = fnHeadwordVariant;
@@ -289,6 +304,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToPropHandler["comment"] = fnComment;
   m_mapKeyToPropHandler["aspectPair"] = fnAspectPair;
   m_mapKeyToPropHandler["altAspectPair"] = fnAltAspectPair;
+  m_mapKeyToPropHandler["headwordComment"] = fnHeadwordComment;
   m_mapKeyToPropHandler["isPluralOf"] = fnIsPluralOf;
   m_mapKeyToPropHandler["pluralOf"] = fnIsPluralOf;
   m_mapKeyToPropHandler["usage"] = fnUsage;
@@ -296,8 +312,9 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToPropHandler["stemAugment"] = fnStemAugment;
   m_mapKeyToPropHandler["trailingComment"] = fnTrailingComment;
   m_mapKeyToPropHandler["restrictedContexts"] = fnRestrictedContexts;
+  m_mapKeyToPropHandler["commonDeviations"] = fnCommonDeviations;
   m_mapKeyToPropHandler["section"] = fnSection;
-  m_mapKeyToPropHandler["fleetingVowel"] = fnFleetingVowel;
+  m_mapKeyToPropHandler["hasFleetingVowel"] = fnHasFleetingVowel;
   m_mapKeyToPropHandler["hasYoAlternation"] = fnHasYoAlternation;
   m_mapKeyToPropHandler["noComparative"] = fnNoComparative;
   m_mapKeyToPropHandler["assumedForms"] = fnAssumedForms;
