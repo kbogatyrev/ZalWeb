@@ -2,7 +2,7 @@
   'targets': [
     {
       'target_name': 'addon',
-      'sources': [ "addon.cc", "zal-web.cc"],
+      'sources': [ "cpp/addon.cc", "cpp/zal-web.cc"],
       'include_dirs': ["<!@(node -p \"require('node-addon-api').include\")",
         "../.vs/Zal-Core/HLib",
         "../.vs/Zal-Core/MainLib"
