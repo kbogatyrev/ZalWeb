@@ -3,10 +3,14 @@
 
 #include <map>
 #include <functional>
+#include <memory>
 #include <napi.h>
 #include "Dictionary.h"
+#include "Lexeme.h"
+#include "Inflection.h"
 
-using fnHandler = std::function<Napi::Value(const Napi::CallbackInfo& info, Hlib::ILexeme *)>;
+using fnLexemeHandler = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme>)>;
+using fnInflectionHandler = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection>)>;
 
 static std::map<Hlib::ET_AccentType, std::string> MapAccentTypeToString {
   { Hlib::ET_AccentType::AT_A, "a" },
@@ -24,7 +28,6 @@ static std::map<Hlib::ET_AccentType, std::string> MapAccentTypeToString {
   { Hlib::ET_AccentType::AT_F2, "f''" }
 };
 
-
 class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
  public:
   static Napi::Object Init(Napi::Env env, Napi::Object exports);
@@ -34,16 +37,23 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
   void SetDbPath(const Napi::CallbackInfo& info);
   void InitPropertyHandlers();
   Napi::Value GetLexemesByInitialForm(const Napi::CallbackInfo& info);
-  Napi::Value LoadFirstLexeme(const Napi::CallbackInfo& info);
-  Napi::Value LoadNextLexeme(const Napi::CallbackInfo& info);
+  Napi::Value CreateLexemeEnumerator(const Napi::CallbackInfo& info);
+  Napi::Value GetFirstLexeme(const Napi::CallbackInfo& info);
+  Napi::Value GetNextLexeme(const Napi::CallbackInfo& info);
+  Napi::Value CreateInflectionEnumerator(const Napi::CallbackInfo& info);
+  Napi::Value GetFirstInflection(const Napi::CallbackInfo& info);
+  Napi::Value GetNextInflection(const Napi::CallbackInfo& info);
   Napi::Value GetProperty(const Napi::CallbackInfo& info);
   Napi::Value SetProperty(const Napi::CallbackInfo& info);
 
-  Hlib::IDictionary * m_pDictionary { nullptr };
-  Hlib::ILexemeEnumerator * m_pLexemeEnumerator { nullptr };
-  Hlib::ILexeme * m_pCurrentLexeme { nullptr };
+  shared_ptr <Hlib::CDictionary> m_spDictionary;
+  shared_ptr <Hlib::CLexemeEnumerator> m_spLexemeEnumerator;
+  shared_ptr <Hlib::CLexeme> m_spCurrentLexeme;
+  shared_ptr <Hlib::CInflectionEnumerator> m_spInflectionEnumerator;
+  shared_ptr <Hlib::CInflection> m_spCurrentInflection;
 
-  std::map<string, fnHandler> m_mapKeyToPropHandler;
+  std::map<string, fnLexemeHandler> m_mapKeyToLexemePropHandler;
+  std::map<string, fnInflectionHandler> m_mapKeyToInflectionPropHandler;
 
 };
 

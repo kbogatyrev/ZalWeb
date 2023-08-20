@@ -2,7 +2,7 @@ var addon = require('bindings')('addon');
 
 var obj = new addon.ZalWeb();
 
-var sDbPath = "/home/konstantin/web/data/ZalData_Master.db3";
+var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master.db3";
 obj.setDbPath(sDbPath);
 
 var lexeme = {
@@ -43,7 +43,7 @@ var lexeme = {
     secondPart : false
 };
 
-let searchString = "баба";
+let searchString = "идти";
 var bLexemeFound = obj.getLexemesByInitialForm(searchString);
 if (bLexemeFound) {
     do {

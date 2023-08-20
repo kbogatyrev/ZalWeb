@@ -5,7 +5,7 @@
 
 extern "C"
 {
-  Hlib::ET_ReturnCode GetDictionary(Hlib::IDictionary*&);
+  Hlib::ET_ReturnCode GetDictionary(shared_ptr<Hlib::CDictionary>&);
 }
 
 Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports) 
@@ -13,7 +13,12 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
   Napi::Function func =
       DefineClass(env, "ZalWeb", { InstanceMethod("setDbPath", &ZalWeb::SetDbPath),
                                    InstanceMethod("getLexemesByInitialForm", &ZalWeb::GetLexemesByInitialForm),
-                                   InstanceMethod("loadNextLexeme", &ZalWeb::LoadNextLexeme),
+                                   InstanceMethod("createLexemeEnumerator", &ZalWeb::CreateLexemeEnumerator),
+                                   InstanceMethod("getFirstLexeme", &ZalWeb::GetFirstLexeme),
+                                   InstanceMethod("getNextLexeme", &ZalWeb::GetNextLexeme),
+                                   InstanceMethod("createIflectionEnumerator", &ZalWeb::CreateInflectionEnumerator),
+                                   InstanceMethod("getFirstInflection", &ZalWeb::GetFirstInflection),
+                                   InstanceMethod("getNextInflection", &ZalWeb::GetNextInflection),
                                    InstanceMethod("setProperty", &ZalWeb::SetProperty),
                                    InstanceMethod("getProperty", &ZalWeb::GetProperty) });
   Napi::FunctionReference* constructor = new Napi::FunctionReference();
@@ -26,23 +31,22 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
 //
 //  Property handlers
 //
-fnHandler fnSourceForm = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnSourceForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 { 
   Hlib::CEString sSource;
   bool bIsVariant = false;
-  auto rc = pLexeme->eGetSourceFormWithDiacritics(sSource, bIsVariant);
+  auto rc = spLexeme->eGetSourceFormWithDiacritics(sSource, bIsVariant);
   if (rc != Hlib::H_NO_ERROR) {
     Napi::TypeError::New(info.Env(), "Failed to retrieve source form.")
       .ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
-
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sSource));
 };
 
-fnHandler fnHomonyms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnHomonyms = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 { 
-  auto& stProps = pLexeme->stGetProperties();
+  auto& stProps = spLexeme->stGetProperties();
   if (stProps.vecHomonyms.size() > 0) {
     Napi::Int32Array arrHomonyms = Napi::Int32Array::New(info.Env(), stProps.vecHomonyms.size());
     for (auto itHomonym = stProps.vecHomonyms.begin(); 
@@ -57,9 +61,9 @@ fnHandler fnHomonyms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexem
   }
 };
 
-fnHandler fnContexts = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnContexts = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  auto& stProps = pLexeme->stGetProperties();
+  auto& stProps = spLexeme->stGetProperties();
   if (stProps.sContexts.uiLength() > 0) {
     Napi::String sContexts = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sContexts));
     return sContexts;
@@ -68,9 +72,9 @@ fnHandler fnContexts = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexem
   }
 };
 
-fnHandler fnHeadwordVariant = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnHeadwordVariant = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  auto& stProps = pLexeme->stGetProperties();
+  auto& stProps = spLexeme->stGetProperties();
   if (stProps.sHeadwordVariant.uiLength() > 0) {
     Napi::String sHeadwordVariant = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordVariant));
     return sHeadwordVariant;
@@ -79,60 +83,33 @@ fnHandler fnHeadwordVariant = [](const Napi::CallbackInfo& info, Hlib::ILexeme *
   }
 };
 
-fnHandler fnSpryazhSm = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnSpryazhSm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bSpryazhSm);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bSpryazhSm);
 };
 
-fnHandler fnMainSymbol = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnMainSymbol = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  auto& stProps = pLexeme->stGetProperties();
+  auto& stProps = spLexeme->stGetProperties();
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sMainSymbol));
 };
 
-fnHandler fnInflectionSymbol = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnInflectionSymbol = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  auto& stProps = pLexeme->stGetProperties();
+  auto& stProps = spLexeme->stGetProperties();
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sInflectionType));
 };
 
-fnHandler fnInflectionType = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnComment = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Number::New(info.Env(), pLexeme->stGetProperties().iType);
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sComment));
 };
 
-fnHandler fnAccentType1 = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
-{
-  auto eAt1 = pLexeme->stGetProperties().eAccentType1;
-  auto itAt1String = MapAccentTypeToString.find(eAt1);
-  if (itAt1String == MapAccentTypeToString.end()) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-  std::string strAt1 = itAt1String->second;  
-  return Napi::String::New(info.Env(), strAt1);
-};
-
-fnHandler fnAccentType2 = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
-{
-  auto eAt2 = pLexeme->stGetProperties().eAccentType2;
-  auto itAt2String = MapAccentTypeToString.find(eAt2);
-  if (itAt2String == MapAccentTypeToString.end()) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-  std::string strAt2 = itAt2String->second;  
-  return Napi::String::New(info.Env(), strAt2);
-};
-
-fnHandler fnComment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
-{
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sComment));
-};
-
-fnHandler fnAspectPair = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnAspectPair = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
   Hlib::CEString sAspectPair;
   int iStressPos = -1;
-  auto rc = pLexeme->eGetAspectPair(sAspectPair, iStressPos);
+  auto rc = spLexeme->eGetAspectPair(sAspectPair, iStressPos);
   if (Hlib::H_NO_ERROR == rc) {
     return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sAspectPair));
   } else {
@@ -140,11 +117,11 @@ fnHandler fnAspectPair = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLex
   }
 };
 
-fnHandler fnAltAspectPair = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnAltAspectPair = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
   Hlib::CEString sAltAspectPair;
   int iStressPos = -1;
-  auto rc = pLexeme->eGetAltAspectPair(sAltAspectPair, iStressPos);
+  auto rc = spLexeme->eGetAltAspectPair(sAltAspectPair, iStressPos);
   if (Hlib::H_NO_ERROR == rc) {
     return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sAltAspectPair));
   } else {
@@ -152,50 +129,45 @@ fnHandler fnAltAspectPair = [](const Napi::CallbackInfo& info, Hlib::ILexeme * p
   }
 };
 
-fnHandler fnHeadwordComment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnHeadwordComment = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  auto& stProps = pLexeme->stGetProperties();
+  auto& stProps = spLexeme->stGetProperties();
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordComment));
 };
 
-fnHandler fnIsPluralOf = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnIsPluralOf = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bIsPluralOf);
+  return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bIsPluralOf);
 };
 
-fnHandler fnPluralOf = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnPluralOf = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sPluralOf));
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sPluralOf));
 };
 
-fnHandler fnUsage = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnUsage = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sUsage));
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sUsage));
 };
 
-fnHandler fnSeeRef = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnSeeRef = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sSeeRef));
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sSeeRef));
 };
 
-fnHandler fnStemAugment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnTrailingComment = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  return Napi::Number::New(info.Env(), pLexeme->stGetProperties().iStemAugment);
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sTrailingComment));
 };
 
-fnHandler fnTrailingComment = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnRestrictedContexts = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sTrailingComment));
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sRestrictedContexts));
 };
 
-fnHandler fnRestrictedContexts = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnInflectionHandler fnCommonDeviations = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(pLexeme->stGetProperties().sRestrictedContexts));
-};
-
-fnHandler fnCommonDeviations = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
-{
-  auto& stProps = pLexeme->stGetProperties();
+  auto& stProps = spInflection->stGetProperties();
   Napi::Int32Array arrCommonDeviations = Napi::Int32Array::New(info.Env(), 2*stProps.mapCommonDeviations.size());
   int iSize {0};
   for (auto& pairDeviation : stProps.mapCommonDeviations) {
@@ -209,75 +181,109 @@ fnHandler fnCommonDeviations = [](const Napi::CallbackInfo& info, Hlib::ILexeme 
   }
 };
 
-fnHandler fnSection = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnSection = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Number::New(info.Env(), pLexeme->stGetProperties().iSection);
+    return Napi::Number::New(info.Env(), spLexeme->stGetProperties().iSection);
 };
 
-fnHandler fnHasFleetingVowel = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnHasYoAlternation = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bFleetingVowel);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bYoAlternation);
 };
 
-fnHandler fnHasYoAlternation = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnNoComparative = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bYoAlternation);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bNoComparative);
 };
 
-fnHandler fnNoComparative = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnAssumedForms = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bNoComparative);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bAssumedForms);
 };
 
-fnHandler fnAssumedForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnHasIrregularForms = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bAssumedForms);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bHasIrregularForms);
 };
 
-fnHandler fnHasIrregularForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnHasIrregularVariants = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bHasIrregularForms);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bHasIrregularVariants);
 };
 
-fnHandler fnHasIrregularVariants = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnNoLongForms = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bHasIrregularVariants);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bNoLongForms);
 };
 
-fnHandler fnShortFormsRestricted = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnDifficultForms = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bShortFormsRestricted);
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bHasDifficultForms);
 };
 
-fnHandler fnShortFormsIncomplete = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnLexemeHandler fnSecondPart = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bShortFormsIncomplete);
+    return Napi::Boolean::New(info.Env(), spLexeme->bIsSecondPart());
 };
 
-fnHandler fnNoLongForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnInflectionHandler fnInflectionType = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bNoLongForms);
+    return Napi::Number::New(info.Env(), spInflection->stGetProperties().iType);
 };
 
-fnHandler fnPastParticipleRestricted = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnInflectionHandler fnAccentType1 = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bPastParticipleRestricted);
+  auto eAt1 = spInflection->stGetProperties().eAccentType1;
+  auto itAt1String = MapAccentTypeToString.find(eAt1);
+  if (itAt1String == MapAccentTypeToString.end()) {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  std::string strAt1 = itAt1String->second;  
+  return Napi::String::New(info.Env(), strAt1);
 };
 
-fnHandler fnNoPassivePastParticiple = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnInflectionHandler fnAccentType2 = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bNoPassivePastParticiple);
+  auto eAt2 = spInflection->stGetProperties().eAccentType2;
+  auto itAt2String = MapAccentTypeToString.find(eAt2);
+  if (itAt2String == MapAccentTypeToString.end()) {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  std::string strAt2 = itAt2String->second;  
+  return Napi::String::New(info.Env(), strAt2);
 };
 
-fnHandler fnDifficultForms = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnInflectionHandler fnStemAugment = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->stGetProperties().bHasDifficultForms);
+  return Napi::Number::New(info.Env(), spInflection->stGetProperties().iStemAugment);
 };
 
-fnHandler fnSecondPart = [](const Napi::CallbackInfo& info, Hlib::ILexeme * pLexeme) -> Napi::Value 
+fnInflectionHandler fnHasFleetingVowel = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
-    return Napi::Boolean::New(info.Env(), pLexeme->bIsSecondPart());
+    return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bFleetingVowel);
 };
+
+fnInflectionHandler fnShortFormsRestricted = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bShortFormsRestricted);
+};
+
+fnInflectionHandler fnShortFormsIncomplete = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bShortFormsIncomplete);
+};
+
+fnInflectionHandler fnPastParticipleRestricted = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bPastParticipleRestricted);
+};
+
+fnInflectionHandler fnNoPassivePastParticiple = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bNoPassivePastParticiple);
+};
+
+// -------------------------------------------------------------------------------------------------------------------------
 
 ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info) 
 {
@@ -291,42 +297,44 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   //Napi::Number value = info[0].As<Napi::Number>();
   //this->value_ = value.DoubleValue();
 
-  m_mapKeyToPropHandler["sourceForm"] = fnSourceForm;
-  m_mapKeyToPropHandler["homonyms"] = fnHomonyms;
-  m_mapKeyToPropHandler["contexts"] = fnContexts;
-  m_mapKeyToPropHandler["headwordVariant"] = fnHeadwordVariant;
-  m_mapKeyToPropHandler["spryazhSm"] = fnSpryazhSm;
-  m_mapKeyToPropHandler["mainSymbol"] = fnMainSymbol;
-  m_mapKeyToPropHandler["inflectionSymbol"] = fnInflectionSymbol;
-  m_mapKeyToPropHandler["inflectionType"] = fnInflectionType;
-  m_mapKeyToPropHandler["accentType1"] = fnAccentType1;
-  m_mapKeyToPropHandler["accentType2"] = fnAccentType2;
-  m_mapKeyToPropHandler["comment"] = fnComment;
-  m_mapKeyToPropHandler["aspectPair"] = fnAspectPair;
-  m_mapKeyToPropHandler["altAspectPair"] = fnAltAspectPair;
-  m_mapKeyToPropHandler["headwordComment"] = fnHeadwordComment;
-  m_mapKeyToPropHandler["isPluralOf"] = fnIsPluralOf;
-  m_mapKeyToPropHandler["pluralOf"] = fnIsPluralOf;
-  m_mapKeyToPropHandler["usage"] = fnUsage;
-  m_mapKeyToPropHandler["seeRef"] = fnUsage;
-  m_mapKeyToPropHandler["stemAugment"] = fnStemAugment;
-  m_mapKeyToPropHandler["trailingComment"] = fnTrailingComment;
-  m_mapKeyToPropHandler["restrictedContexts"] = fnRestrictedContexts;
-  m_mapKeyToPropHandler["commonDeviations"] = fnCommonDeviations;
-  m_mapKeyToPropHandler["section"] = fnSection;
-  m_mapKeyToPropHandler["hasFleetingVowel"] = fnHasFleetingVowel;
-  m_mapKeyToPropHandler["hasYoAlternation"] = fnHasYoAlternation;
-  m_mapKeyToPropHandler["noComparative"] = fnNoComparative;
-  m_mapKeyToPropHandler["assumedForms"] = fnAssumedForms;
-  m_mapKeyToPropHandler["hasIrregularForms"] = fnHasIrregularForms;
-  m_mapKeyToPropHandler["hasIrregularVariants"] = fnHasIrregularVariants;
-  m_mapKeyToPropHandler["shortFormsRestricted"] = fnShortFormsRestricted;
-  m_mapKeyToPropHandler["shortFormsIncomplete"] = fnShortFormsIncomplete;
-  m_mapKeyToPropHandler["noLongForms"] = fnNoLongForms;
-  m_mapKeyToPropHandler["pastParticipleRestricted"] = fnPastParticipleRestricted;
-  m_mapKeyToPropHandler["noPassivePastParticiple"] = fnNoPassivePastParticiple;
-  m_mapKeyToPropHandler["difficultForms"] = fnDifficultForms;
-  m_mapKeyToPropHandler["secondPart"] = fnSecondPart;
+  m_mapKeyToLexemePropHandler["sourceForm"] = fnSourceForm;
+  m_mapKeyToLexemePropHandler["homonyms"] = fnHomonyms;
+  m_mapKeyToLexemePropHandler["contexts"] = fnContexts;
+  m_mapKeyToLexemePropHandler["headwordVariant"] = fnHeadwordVariant;
+  m_mapKeyToLexemePropHandler["spryazhSm"] = fnSpryazhSm;
+  m_mapKeyToLexemePropHandler["mainSymbol"] = fnMainSymbol;
+  m_mapKeyToLexemePropHandler["inflectionSymbol"] = fnInflectionSymbol;
+  m_mapKeyToLexemePropHandler["comment"] = fnComment;
+  m_mapKeyToLexemePropHandler["aspectPair"] = fnAspectPair;
+  m_mapKeyToLexemePropHandler["altAspectPair"] = fnAltAspectPair;
+  m_mapKeyToLexemePropHandler["headwordComment"] = fnHeadwordComment;
+  m_mapKeyToLexemePropHandler["isPluralOf"] = fnIsPluralOf;
+  m_mapKeyToLexemePropHandler["pluralOf"] = fnIsPluralOf;
+  m_mapKeyToLexemePropHandler["usage"] = fnUsage;
+  m_mapKeyToLexemePropHandler["seeRef"] = fnUsage;
+  m_mapKeyToLexemePropHandler["trailingComment"] = fnTrailingComment;
+  m_mapKeyToLexemePropHandler["restrictedContexts"] = fnRestrictedContexts;
+  m_mapKeyToLexemePropHandler["section"] = fnSection;
+  m_mapKeyToLexemePropHandler["hasYoAlternation"] = fnHasYoAlternation;
+  m_mapKeyToLexemePropHandler["noComparative"] = fnNoComparative;
+  m_mapKeyToLexemePropHandler["assumedForms"] = fnAssumedForms;
+  m_mapKeyToLexemePropHandler["hasIrregularForms"] = fnHasIrregularForms;
+  m_mapKeyToLexemePropHandler["hasIrregularVariants"] = fnHasIrregularVariants;
+  m_mapKeyToLexemePropHandler["noLongForms"] = fnNoLongForms;
+  m_mapKeyToLexemePropHandler["difficultForms"] = fnDifficultForms;
+  m_mapKeyToLexemePropHandler["secondPart"] = fnSecondPart;
+
+  m_mapKeyToInflectionPropHandler["commonDeviations"] = fnCommonDeviations;
+  m_mapKeyToInflectionPropHandler["inflectionType"] = fnInflectionType;
+  m_mapKeyToInflectionPropHandler["accentType1"] = fnAccentType1;
+  m_mapKeyToInflectionPropHandler["accentType2"] = fnAccentType2;
+  m_mapKeyToInflectionPropHandler["stemAugment"] = fnStemAugment;
+  m_mapKeyToInflectionPropHandler["hasFleetingVowel"] = fnHasFleetingVowel;
+  m_mapKeyToInflectionPropHandler["shortFormsRestricted"] = fnShortFormsRestricted;
+  m_mapKeyToInflectionPropHandler["shortFormsIncomplete"] = fnShortFormsIncomplete;
+  m_mapKeyToInflectionPropHandler["pastParticipleRestricted"] = fnPastParticipleRestricted;
+  m_mapKeyToInflectionPropHandler["noPassivePastParticiple"] = fnNoPassivePastParticiple;
+
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
@@ -345,7 +353,7 @@ void ZalWeb::SetDbPath(const Napi::CallbackInfo& info)
         return;
     }
 
-    auto rc = GetDictionary(m_pDictionary);
+    auto rc = GetDictionary(m_spDictionary);
     if (rc != Hlib::H_NO_ERROR)
     {
         Napi::TypeError::New(env, "Error getting dictionary pointer.")
@@ -353,7 +361,7 @@ void ZalWeb::SetDbPath(const Napi::CallbackInfo& info)
     }
 
     auto sDbPath = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
-    rc = m_pDictionary->eSetDbPath(sDbPath);
+    rc = m_spDictionary->eSetDbPath(sDbPath);
     if (rc != Hlib::H_NO_ERROR)
     {
         Napi::TypeError::New(env, "Error setting database path.")
@@ -361,9 +369,9 @@ void ZalWeb::SetDbPath(const Napi::CallbackInfo& info)
     }
 
 /*    
-    rc = m_pDictionary->eGetLexemesByInitialForm(L"мама");
+    rc = m_spDictionary->eGetLexemesByInitialForm(L"мама");
     Hlib::ILexemeEnumerator * pLexEnum = nullptr;
-    Hlib::ILexeme * pLexeme = nullptr;
+    shared_ptr<Hlib::CLexeme> spLexeme = nullptr;
     rc = pDict->eCreateLexemeEnumerator(pLexEnum);
     rc = pLexEnum->eGetFirstLexeme(pLexeme);
     while (rc == Hlib::H_NO_ERROR) {
@@ -392,9 +400,9 @@ Napi::Value ZalWeb::GetLexemesByInitialForm(const Napi::CallbackInfo& info)
     }
 
     auto sSearchWord = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
-    auto rc = m_pDictionary->eGetLexemesByInitialForm(sSearchWord);
+    auto rc = m_spDictionary->eGetLexemesByInitialForm(sSearchWord);
     if (rc != Hlib::H_NO_MORE && rc != Hlib::H_FALSE) {
-       Napi::TypeError::New(env, "Unable to create lexeme enumerator.")
+       Napi::TypeError::New(env, "Unable to retrieve lexeme.")
           .ThrowAsJavaScriptException();
     }
 
@@ -402,25 +410,63 @@ Napi::Value ZalWeb::GetLexemesByInitialForm(const Napi::CallbackInfo& info)
       return Napi::Boolean::New(info.Env(), false);
     }
 
-    rc = m_pDictionary->eCreateLexemeEnumerator(m_pLexemeEnumerator);
-    if (rc != Hlib::H_NO_ERROR) {
-       Napi::TypeError::New(env, "Unable to create lexeme enumerator.")
-          .ThrowAsJavaScriptException();
-      return Napi::Boolean::New(info.Env(), false);
-    }
-    rc = m_pLexemeEnumerator->eGetFirstLexeme(m_pCurrentLexeme);
-    if (rc != Hlib::H_NO_ERROR) {
-       Napi::TypeError::New(env, "Unable to load first lexeme.")
-          .ThrowAsJavaScriptException();
-      return Napi::Boolean::New(info.Env(), false);
-    }
-
     return Napi::Boolean::New(info.Env(), true);
 }
 
-Napi::Value ZalWeb::LoadNextLexeme(const Napi::CallbackInfo& info)
+Napi::Value ZalWeb::CreateLexemeEnumerator(const Napi::CallbackInfo& info)
 {
-  auto rc = m_pLexemeEnumerator->eGetNextLexeme(m_pCurrentLexeme);
+    auto rc = m_spDictionary->eCreateLexemeEnumerator(m_spLexemeEnumerator);
+    if (rc != Hlib::H_NO_ERROR) {
+       Napi::TypeError::New(info.Env(), "Unable to create lexeme enumerator.")
+          .ThrowAsJavaScriptException();
+      return Napi::Boolean::New(info.Env(), false);
+    }
+    return Napi::Boolean::New(info.Env(), false);
+}
+
+Napi::Value ZalWeb::GetFirstLexeme(const Napi::CallbackInfo& info)
+{
+    auto rc = m_spLexemeEnumerator->eGetFirstLexeme(m_spCurrentLexeme);
+    if (rc != Hlib::H_NO_ERROR) {
+       Napi::TypeError::New(info.Env(), "Unable to load first lexeme.")
+          .ThrowAsJavaScriptException();
+      return Napi::Boolean::New(info.Env(), false);
+    }
+    return Napi::Boolean::New(info.Env(), false);
+}
+
+Napi::Value ZalWeb::GetNextLexeme(const Napi::CallbackInfo& info)
+{
+  auto rc = m_spLexemeEnumerator->eGetNextLexeme(m_spCurrentLexeme);
+  auto bRet = (Hlib::H_NO_ERROR == rc) ? true : false;
+  return Napi::Boolean::New(info.Env(), bRet);
+}
+
+Napi::Value ZalWeb::CreateInflectionEnumerator(const Napi::CallbackInfo& info)
+{
+    auto rc = m_spCurrentLexeme->eCreateInflectionEnumerator(m_spInflectionEnumerator);
+    if (rc != Hlib::H_NO_ERROR) {
+       Napi::TypeError::New(info.Env(), "Unable to create inflection enumerator.")
+          .ThrowAsJavaScriptException();
+      return Napi::Boolean::New(info.Env(), false);
+    }
+    return Napi::Boolean::New(info.Env(), false);
+}
+
+Napi::Value ZalWeb::GetFirstInflection(const Napi::CallbackInfo& info)
+{
+    auto rc = m_spInflectionEnumerator->eGetFirstInflection(m_spCurrentInflection);
+    if (rc != Hlib::H_NO_ERROR) {
+       Napi::TypeError::New(info.Env(), "Unable to load first inflection.")
+          .ThrowAsJavaScriptException();
+      return Napi::Boolean::New(info.Env(), false);
+    }
+    return Napi::Boolean::New(info.Env(), false);
+}
+
+Napi::Value ZalWeb::GetNextInflection(const Napi::CallbackInfo& info)
+{
+  auto rc = m_spInflectionEnumerator->eGetNextInflection(m_spCurrentInflection);
   auto bRet = (Hlib::H_NO_ERROR == rc) ? true : false;
   return Napi::Boolean::New(info.Env(), bRet);
 }
@@ -443,12 +489,12 @@ Napi::Value ZalWeb::GetProperty(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);   
   }
 
-  if (nullptr == m_pCurrentLexeme) {
+  if (nullptr == m_spCurrentLexeme) {
     Napi::TypeError::New(info.Env(), "Lexeme pointer is NULL.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  auto stLexemeProperties = m_pCurrentLexeme->stGetProperties();
+  auto stLexemeProperties = m_spCurrentLexeme->stGetProperties();
   auto sKey = info[0].As<Napi::String>().Utf8Value();
 
 //  auto itProperty = m_mapStringToProperty.find(sKey);
@@ -457,12 +503,12 @@ Napi::Value ZalWeb::GetProperty(const Napi::CallbackInfo& info)
 //    return Napi::Boolean::New(info.Env(), false);   
 //  }
 
-  auto itProperty = m_mapKeyToPropHandler.find(sKey);
-  if (m_mapKeyToPropHandler.end() == itProperty) {
+  auto itProperty = m_mapKeyToLexemePropHandler.find(sKey);
+  if (m_mapKeyToLexemePropHandler.end() == itProperty) {
     std::cout << "ERROR: property " << sKey << " not found.\n";
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  return itProperty->second(info, m_pCurrentLexeme);
+  return itProperty->second(info, m_spCurrentLexeme);
 
 }
