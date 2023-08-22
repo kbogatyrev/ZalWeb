@@ -3,10 +3,10 @@
 #include "EString.h"
 #include "zal-web.h"
 
-extern "C"
-{
-  Hlib::ET_ReturnCode GetDictionary(shared_ptr<Hlib::CDictionary>&);
-}
+//extern "C"
+//{
+//  Hlib::ET_ReturnCode GetDictionary(shared_ptr<Hlib::CDictionary>&);
+//}
 
 Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports) 
 {
@@ -16,11 +16,13 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
                                    InstanceMethod("createLexemeEnumerator", &ZalWeb::CreateLexemeEnumerator),
                                    InstanceMethod("getFirstLexeme", &ZalWeb::GetFirstLexeme),
                                    InstanceMethod("getNextLexeme", &ZalWeb::GetNextLexeme),
-                                   InstanceMethod("createIflectionEnumerator", &ZalWeb::CreateInflectionEnumerator),
+                                   InstanceMethod("createInflectionEnumerator", &ZalWeb::CreateInflectionEnumerator),
                                    InstanceMethod("getFirstInflection", &ZalWeb::GetFirstInflection),
                                    InstanceMethod("getNextInflection", &ZalWeb::GetNextInflection),
-                                   InstanceMethod("setProperty", &ZalWeb::SetProperty),
-                                   InstanceMethod("getProperty", &ZalWeb::GetProperty) });
+                                   InstanceMethod("setLexemeProperty", &ZalWeb::SetLexemeProperty),
+                                   InstanceMethod("getLexemeProperty", &ZalWeb::GetLexemeProperty),
+                                   InstanceMethod("setInflectionProperty", &ZalWeb::SetInflectionProperty),
+                                   InstanceMethod("getInflectionProperty", &ZalWeb::GetInflectionProperty) });
   Napi::FunctionReference* constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
   env.SetInstanceData(constructor);
@@ -165,22 +167,6 @@ fnLexemeHandler fnRestrictedContexts = [](const Napi::CallbackInfo& info, shared
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sRestrictedContexts));
 };
 
-fnInflectionHandler fnCommonDeviations = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
-{
-  auto& stProps = spInflection->stGetProperties();
-  Napi::Int32Array arrCommonDeviations = Napi::Int32Array::New(info.Env(), 2*stProps.mapCommonDeviations.size());
-  int iSize {0};
-  for (auto& pairDeviation : stProps.mapCommonDeviations) {
-    arrCommonDeviations[iSize++] = pairDeviation.first;
-    arrCommonDeviations[iSize++] = pairDeviation.second;
-  }
-  if (iSize > 0) {
-    return arrCommonDeviations;    
-  } else {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-};
-
 fnLexemeHandler fnSection = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
     return Napi::Number::New(info.Env(), spLexeme->stGetProperties().iSection);
@@ -226,6 +212,13 @@ fnLexemeHandler fnSecondPart = [](const Napi::CallbackInfo& info, shared_ptr<Hli
     return Napi::Boolean::New(info.Env(), spLexeme->bIsSecondPart());
 };
 
+//-------------------------------------------------------------------------------------------------------------------------------
+
+fnInflectionHandler fnPrimaryInflectionGroup = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+  return Napi::Number::New(info.Env(), spInflection->stGetProperties().bPrimaryInflectionGroup);
+};
+
 fnInflectionHandler fnInflectionType = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
     return Napi::Number::New(info.Env(), spInflection->stGetProperties().iType);
@@ -253,12 +246,28 @@ fnInflectionHandler fnAccentType2 = [](const Napi::CallbackInfo& info, shared_pt
   return Napi::String::New(info.Env(), strAt2);
 };
 
+fnInflectionHandler fnCommonDeviations = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+  auto& stProps = spInflection->stGetProperties();
+  Napi::Int32Array arrCommonDeviations = Napi::Int32Array::New(info.Env(), 2*stProps.mapCommonDeviations.size());
+  int iSize {0};
+  for (auto& pairDeviation : stProps.mapCommonDeviations) {
+    arrCommonDeviations[iSize++] = pairDeviation.first;
+    arrCommonDeviations[iSize++] = pairDeviation.second;
+  }
+  if (iSize > 0) {
+    return arrCommonDeviations;    
+  } else {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+};
+
 fnInflectionHandler fnStemAugment = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
   return Napi::Number::New(info.Env(), spInflection->stGetProperties().iStemAugment);
 };
 
-fnInflectionHandler fnHasFleetingVowel = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+fnInflectionHandler fnFleetingVowel = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
 {
     return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bFleetingVowel);
 };
@@ -324,12 +333,13 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToLexemePropHandler["difficultForms"] = fnDifficultForms;
   m_mapKeyToLexemePropHandler["secondPart"] = fnSecondPart;
 
+  m_mapKeyToInflectionPropHandler["primaryInflectionGroup"] = fnPrimaryInflectionGroup;
   m_mapKeyToInflectionPropHandler["commonDeviations"] = fnCommonDeviations;
   m_mapKeyToInflectionPropHandler["inflectionType"] = fnInflectionType;
   m_mapKeyToInflectionPropHandler["accentType1"] = fnAccentType1;
   m_mapKeyToInflectionPropHandler["accentType2"] = fnAccentType2;
   m_mapKeyToInflectionPropHandler["stemAugment"] = fnStemAugment;
-  m_mapKeyToInflectionPropHandler["hasFleetingVowel"] = fnHasFleetingVowel;
+  m_mapKeyToInflectionPropHandler["fleetingVowel"] = fnFleetingVowel;
   m_mapKeyToInflectionPropHandler["shortFormsRestricted"] = fnShortFormsRestricted;
   m_mapKeyToInflectionPropHandler["shortFormsIncomplete"] = fnShortFormsIncomplete;
   m_mapKeyToInflectionPropHandler["pastParticipleRestricted"] = fnPastParticipleRestricted;
@@ -353,12 +363,20 @@ void ZalWeb::SetDbPath(const Napi::CallbackInfo& info)
         return;
     }
 
-    auto rc = GetDictionary(m_spDictionary);
-    if (rc != Hlib::H_NO_ERROR)
+//    auto rc = GetDictionary(m_spDictionary);
+//    if (rc != Hlib::H_NO_ERROR)
+//    {
+//        Napi::TypeError::New(env, "Error getting dictionary pointer.")
+//          .ThrowAsJavaScriptException();
+//    }
+
+    auto rc = Hlib::Singleton::pGetInstance()->eGetDictionary(m_spDictionary);
+    if (rc != Hlib::H_NO_ERROR || nullptr == m_spDictionary)
     {
         Napi::TypeError::New(env, "Error getting dictionary pointer.")
           .ThrowAsJavaScriptException();
     }
+
 
     auto sDbPath = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
     rc = m_spDictionary->eSetDbPath(sDbPath);
@@ -421,7 +439,7 @@ Napi::Value ZalWeb::CreateLexemeEnumerator(const Napi::CallbackInfo& info)
           .ThrowAsJavaScriptException();
       return Napi::Boolean::New(info.Env(), false);
     }
-    return Napi::Boolean::New(info.Env(), false);
+    return Napi::Boolean::New(info.Env(), true);
 }
 
 Napi::Value ZalWeb::GetFirstLexeme(const Napi::CallbackInfo& info)
@@ -432,7 +450,7 @@ Napi::Value ZalWeb::GetFirstLexeme(const Napi::CallbackInfo& info)
           .ThrowAsJavaScriptException();
       return Napi::Boolean::New(info.Env(), false);
     }
-    return Napi::Boolean::New(info.Env(), false);
+    return Napi::Boolean::New(info.Env(), true);
 }
 
 Napi::Value ZalWeb::GetNextLexeme(const Napi::CallbackInfo& info)
@@ -450,7 +468,7 @@ Napi::Value ZalWeb::CreateInflectionEnumerator(const Napi::CallbackInfo& info)
           .ThrowAsJavaScriptException();
       return Napi::Boolean::New(info.Env(), false);
     }
-    return Napi::Boolean::New(info.Env(), false);
+    return Napi::Boolean::New(info.Env(), true);
 }
 
 Napi::Value ZalWeb::GetFirstInflection(const Napi::CallbackInfo& info)
@@ -461,17 +479,23 @@ Napi::Value ZalWeb::GetFirstInflection(const Napi::CallbackInfo& info)
           .ThrowAsJavaScriptException();
       return Napi::Boolean::New(info.Env(), false);
     }
-    return Napi::Boolean::New(info.Env(), false);
+
+    m_mmapLexemeToInflections.insert(std::pair{m_spCurrentLexeme, m_spCurrentInflection});
+
+    return Napi::Boolean::New(info.Env(), true);
 }
 
 Napi::Value ZalWeb::GetNextInflection(const Napi::CallbackInfo& info)
 {
   auto rc = m_spInflectionEnumerator->eGetNextInflection(m_spCurrentInflection);
   auto bRet = (Hlib::H_NO_ERROR == rc) ? true : false;
+  if (bRet) {
+    m_mmapLexemeToInflections.insert(std::pair{m_spCurrentLexeme, m_spCurrentInflection});
+  }
   return Napi::Boolean::New(info.Env(), bRet);
 }
 
-Napi::Value ZalWeb::SetProperty(const Napi::CallbackInfo& info) 
+Napi::Value ZalWeb::SetLexemeProperty(const Napi::CallbackInfo& info) 
 {
   if (info.Length() <= 1) {
     Napi::TypeError::New(info.Env(), "Expected two arguments.").ThrowAsJavaScriptException();
@@ -482,7 +506,7 @@ Napi::Value ZalWeb::SetProperty(const Napi::CallbackInfo& info)
   }
 }
 
-Napi::Value ZalWeb::GetProperty(const Napi::CallbackInfo& info) 
+Napi::Value ZalWeb::GetLexemeProperty(const Napi::CallbackInfo& info) 
 {
   if (info.Length() < 1) {
     Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
@@ -510,5 +534,47 @@ Napi::Value ZalWeb::GetProperty(const Napi::CallbackInfo& info)
   }
 
   return itProperty->second(info, m_spCurrentLexeme);
+
+}
+
+Napi::Value ZalWeb::SetInflectionProperty(const Napi::CallbackInfo& info) 
+{
+  if (info.Length() <= 1) {
+    Napi::TypeError::New(info.Env(), "Expected two arguments.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+  else {
+    return Napi::Boolean::New(info.Env(), true);
+  }
+}
+
+Napi::Value ZalWeb::GetInflectionProperty(const Napi::CallbackInfo& info) 
+{
+  if (info.Length() < 1) {
+    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+
+  if (nullptr == m_spCurrentInflection) {
+    Napi::TypeError::New(info.Env(), "Inflection pointer is NULL.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto stInflectionProperties = m_spCurrentInflection->stGetProperties();
+  auto sKey = info[0].As<Napi::String>().Utf8Value();
+
+//  auto itProperty = m_mapStringToProperty.find(sKey);
+//  if (m_mapStringToProperty.end() == itProperty) {
+//    Napi::TypeError::New(info.Env(), "Property not found.").ThrowAsJavaScriptException();
+//    return Napi::Boolean::New(info.Env(), false);   
+//  }
+
+  auto itProperty = m_mapKeyToInflectionPropHandler.find(sKey);
+  if (m_mapKeyToInflectionPropHandler.end() == itProperty) {
+    std::cout << "ERROR: inflection property " << sKey << " not found.\n";
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  return itProperty->second(info, m_spCurrentInflection);
 
 }

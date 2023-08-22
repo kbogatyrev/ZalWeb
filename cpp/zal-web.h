@@ -8,6 +8,7 @@
 #include "Dictionary.h"
 #include "Lexeme.h"
 #include "Inflection.h"
+#include "Singleton.h"
 
 using fnLexemeHandler = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme>)>;
 using fnInflectionHandler = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection>)>;
@@ -43,14 +44,18 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
   Napi::Value CreateInflectionEnumerator(const Napi::CallbackInfo& info);
   Napi::Value GetFirstInflection(const Napi::CallbackInfo& info);
   Napi::Value GetNextInflection(const Napi::CallbackInfo& info);
-  Napi::Value GetProperty(const Napi::CallbackInfo& info);
-  Napi::Value SetProperty(const Napi::CallbackInfo& info);
+  Napi::Value GetLexemeProperty(const Napi::CallbackInfo& info);
+  Napi::Value SetLexemeProperty(const Napi::CallbackInfo& info);
+  Napi::Value GetInflectionProperty(const Napi::CallbackInfo& info);
+  Napi::Value SetInflectionProperty(const Napi::CallbackInfo& info);
 
   shared_ptr <Hlib::CDictionary> m_spDictionary;
   shared_ptr <Hlib::CLexemeEnumerator> m_spLexemeEnumerator;
   shared_ptr <Hlib::CLexeme> m_spCurrentLexeme;
   shared_ptr <Hlib::CInflectionEnumerator> m_spInflectionEnumerator;
   shared_ptr <Hlib::CInflection> m_spCurrentInflection;
+
+  std::multimap<std::shared_ptr<Hlib::CLexeme>, std::shared_ptr<Hlib::CInflection>> m_mmapLexemeToInflections;
 
   std::map<string, fnLexemeHandler> m_mapKeyToLexemePropHandler;
   std::map<string, fnInflectionHandler> m_mapKeyToInflectionPropHandler;
