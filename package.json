@@ -1,16 +1,16 @@
 {
-  "name": "object_wrap",
-  "version": "0.0.0",
-  "description": "Node.js Addons Example #6",
-  "main": "addon.js",
-  "private": true,
-  "gypfile": true,
-  "engines": {
-    "node": "~10 >=10.20 || >=12.17"
+  "name": "zal-web",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
+  "author": "",
+  "license": "ISC",
+  "description": "",
   "dependencies": {
-    "bindings": "~1.2.1",
-    "node-addon-api": "^3.0.0",
-    "node-gyp": "^9.3.0"
+    "bindings": "^1.5.0",
+    "cmake-js": "^7.2.1"
   }
 }
