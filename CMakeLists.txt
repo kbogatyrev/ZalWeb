@@ -11,7 +11,7 @@ target_sources (${PROJECT_NAME} PRIVATE
   cpp/zal-web.cc
 )
 
-target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} /home/konstantin/.vs/Zal-Core/out/build/linux-release/libZalMainLib.a)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB} /home/konstantin/.vs/Zal-Core/out/build/linux-debug/libZalMainLib.a)
 
 # dependencies
 if(NOT EXISTS ${PROJECT_SOURCE_DIR}/node-addon/node-addon-api)
@@ -41,6 +41,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${PROJECT_SOURCE_DIR}/node-addon/node-api-headers/include 
   ../.vs/Zal-Core/HLib
   ../.vs/Zal-Core/MainLib
+  ../.vs/Zal-Core/ThirdParty/Sqlite
 )
 
 # platform special options
