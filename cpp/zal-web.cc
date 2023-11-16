@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 //#include <napi.h>
 #include "Logging.h"
 #include "Enums.h"
@@ -6,6 +7,7 @@
 #include "Singleton.h"
 #include "Lexeme.h"
 #include "Inflection.h"
+#include "WordForm.h"
 #include "zal-web.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
@@ -22,10 +24,15 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
                                    InstanceMethod("loadNextLexeme", &ZalWeb::LoadNextLexeme),
                                    InstanceMethod("loadFirstInflection", &ZalWeb::LoadFirstInflection),
                                    InstanceMethod("loadNextInflection", &ZalWeb::LoadNextInflection),
+                                   InstanceMethod("loadFirstWordForm", &ZalWeb::LoadFirstWordForm),
+                                   InstanceMethod("loadNextWordForm", &ZalWeb::LoadNextWordForm),
                                    InstanceMethod("setLexemeProperty", &ZalWeb::SetLexemeProperty),
                                    InstanceMethod("getLexemeProperty", &ZalWeb::GetLexemeProperty),
                                    InstanceMethod("setInflectionProperty", &ZalWeb::SetInflectionProperty),
-                                   InstanceMethod("getInflectionProperty", &ZalWeb::GetInflectionProperty) });
+                                   InstanceMethod("getInflectionProperty", &ZalWeb::GetInflectionProperty),
+                                   InstanceMethod("generateParadigm", &ZalWeb::GenerateParadigm),
+                                   InstanceMethod("setWordFormProperty", &ZalWeb::SetWordFormProperty),
+                                   InstanceMethod("getWordFormProperty", &ZalWeb::GetWordFormProperty) });
   Napi::FunctionReference* constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
   env.SetInstanceData(constructor);
@@ -36,14 +43,19 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
 //
 //  Property handlers
 //
+fnHandlerLexeme fnLexemeId = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{ 
+  auto llId = spLexeme->llLexemeId();
+  return Napi::String::New(info.Env(), std::to_string(llId));
+};
+
 fnHandlerLexeme fnSourceForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 { 
   Hlib::CEString sSource;
   bool bIsVariant = false;
   auto rc = spLexeme->eGetSourceFormWithDiacritics(sSource, bIsVariant);
   if (rc != Hlib::H_NO_ERROR) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve source form.")
-      .ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve source form.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
@@ -137,7 +149,7 @@ fnHandlerLexeme fnSeeRef = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::C
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sSeeRef));
 };
 
-fnHandlerLexeme fnTrailingComment = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+fnHandlerLexeme fnTrailingCommentLexeme = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sTrailingComment));
 };
@@ -190,6 +202,14 @@ fnHandlerLexeme fnDifficultForms = [](const Napi::CallbackInfo& info, shared_ptr
 fnHandlerLexeme fnSecondPart = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
     return Napi::Boolean::New(info.Env(), spLexeme->bIsSecondPart());
+};
+
+// --------------------------------------------------------------------------------------------------------------------------------------------
+
+fnHandlerInflection fnInflectionId = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+  auto llId = spInflection->llInflectionId();
+  return Napi::String::New(info.Env(), std::to_string(llId));
 };
 
 fnHandlerInflection fnShortFormsRestricted = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
@@ -289,6 +309,160 @@ fnHandlerInflection fnNoPassivePastParticiple = [](const Napi::CallbackInfo& inf
     return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bNoPassivePastParticiple);
 };
 
+// -------------------------------------------------------------------------------------------------------------------------------------------------
+
+fnHandlerWordForm fnWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sWordForm()));
+};
+
+fnHandlerWordForm fnStem = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sStem()));
+};
+
+fnHandlerWordForm fnEnding = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sEnding()));
+};
+
+fnHandlerWordForm fnPartOfSpeech = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto ePos = spWordForm->ePos();
+  auto itPosString = MapPosToString.find(ePos);
+  if (itPosString == MapPosToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve source part of speech value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itPosString->second);
+};
+
+fnHandlerWordForm fnCase = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eCase = spWordForm->eCase();
+  auto itCaseString = MapCaseToString.find(eCase);
+  if (itCaseString == MapCaseToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve case value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itCaseString->second);
+};
+
+fnHandlerWordForm fnSubParadigm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eSubparadigm = spWordForm->eSubparadigm();
+  auto itSubparadigmString = MapSubparadigmToString.find(eSubparadigm);
+  if (itSubparadigmString == MapSubparadigmToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve subparadigm value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itSubparadigmString->second);
+};
+
+fnHandlerWordForm fnNumber = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eNumber = spWordForm->eNumber();
+  auto itNumberString = MapNumberToString.find(eNumber);
+  if (itNumberString == MapNumberToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve number value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itNumberString->second);
+};
+
+fnHandlerWordForm fnGender = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eGender = spWordForm->eGender();
+  auto itGenderString = MapGenderToString.find(eGender);
+  if (itGenderString == MapGenderToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve gender value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itGenderString->second);
+};
+
+fnHandlerWordForm fnPerson = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto ePerson = spWordForm->ePerson();
+  auto itPersonString = MapPersonToString.find(ePerson);
+  if (itPersonString == MapPersonToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve person value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itPersonString->second);
+};
+
+fnHandlerWordForm fnAnimacy = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eAnimacy = spWordForm->eAnimacy();
+  auto itAnimacyString = MapAnimacyToString.find(eAnimacy);
+  if (itAnimacyString == MapAnimacyToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve animacy value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itAnimacyString->second);
+};
+
+fnHandlerWordForm fnReflexivity = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eReflexivity = spWordForm->eReflexive();
+  auto itReflexivityString = MapReflexivityToString.find(eReflexivity);
+  if (itReflexivityString == MapReflexivityToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve reflexivity value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itReflexivityString->second);
+};
+
+fnHandlerWordForm fnAspect = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eAspect = spWordForm->eAspect();
+  auto itAspectString = MapAspectToString.find(eAspect);
+  if (itAspectString == MapAspectToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve aspect value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itAspectString->second);
+};
+
+fnHandlerWordForm fnStatus = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  auto eStatus = spWordForm->eStatus();
+  auto itStatusString = MapStatusToString.find(eStatus);
+  if (itStatusString == MapStatusToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve status value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itStatusString->second);
+};
+
+fnHandlerWordForm fnIsIrregular = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  return Napi::Boolean::New(info.Env(), spWordForm->bIrregular());
+};
+
+fnHandlerWordForm fnIsVariant = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  return Napi::Boolean::New(info.Env(), spWordForm->bIsVariant());
+};
+
+fnHandlerWordForm fnIsDifficult = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  return Napi::Boolean::New(info.Env(), spWordForm->bIsDifficult());
+};
+
+fnHandlerWordForm fnLeadCommentWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sLeadComment()));
+};
+
+fnHandlerWordForm fnTrailingCommentWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sTrailingComment()));
+};
+
+// -------------------------------------------------------------------------------------------
+
 ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info) 
 {  
 //  Napi::Env env = info.Env();
@@ -305,10 +479,10 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   auto rc = pSingleton->eGetDictionary(m_spDictionary);
   if (rc != Hlib::H_NO_ERROR)
   {
-      Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.")
-          .ThrowAsJavaScriptException();
+      Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.").ThrowAsJavaScriptException();
   }
 
+  m_mapKeyToLexemePropHandler["lexemeId"] = fnLexemeId;
   m_mapKeyToLexemePropHandler["sourceForm"] = fnSourceForm;
   m_mapKeyToLexemePropHandler["homonyms"] = fnHomonyms;
   m_mapKeyToLexemePropHandler["contexts"] = fnContexts;
@@ -322,7 +496,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToLexemePropHandler["pluralOf"] = fnIsPluralOf;
   m_mapKeyToLexemePropHandler["usage"] = fnUsage;
   m_mapKeyToLexemePropHandler["seeRef"] = fnUsage;
-  m_mapKeyToLexemePropHandler["trailingComment"] = fnTrailingComment;
+  m_mapKeyToLexemePropHandler["trailingComment"] = fnTrailingCommentLexeme;
   m_mapKeyToLexemePropHandler["restrictedContexts"] = fnRestrictedContexts;
   m_mapKeyToLexemePropHandler["section"] = fnSection;
   m_mapKeyToLexemePropHandler["hasYoAlternation"] = fnHasYoAlternation;
@@ -334,6 +508,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToLexemePropHandler["difficultForms"] = fnDifficultForms;
   m_mapKeyToLexemePropHandler["secondPart"] = fnSecondPart;
 
+  m_mapKeyToInflectionPropHandler["inflectionId"] = fnInflectionId;
   m_mapKeyToInflectionPropHandler["inflectionType"] = fnInflectionType;
   m_mapKeyToInflectionPropHandler["accentType1"] = fnAccentType1;
   m_mapKeyToInflectionPropHandler["accentType2"] = fnAccentType2;
@@ -347,6 +522,24 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToInflectionPropHandler["pastParticipleRestricted"] = fnPastParticipleRestricted;
   m_mapKeyToInflectionPropHandler["noPassivePastParticiple"] = fnNoPassivePastParticiple;
 
+  m_mapKeyToWordFormPropHandler["wordForm"] = fnWordForm;
+  m_mapKeyToWordFormPropHandler["stem"] = fnStem;
+  m_mapKeyToWordFormPropHandler["ending"] = fnEnding;
+  m_mapKeyToWordFormPropHandler["partOfSpeech"] = fnPartOfSpeech;
+  m_mapKeyToWordFormPropHandler["case"] = fnCase;
+  m_mapKeyToWordFormPropHandler["subParadigm"] = fnSubParadigm;
+  m_mapKeyToWordFormPropHandler["number"] = fnNumber;
+  m_mapKeyToWordFormPropHandler["gender"] = fnGender;
+  m_mapKeyToWordFormPropHandler["person"] = fnPerson;
+  m_mapKeyToWordFormPropHandler["animacy"] = fnAnimacy;
+  m_mapKeyToWordFormPropHandler["reflexivity"] = fnReflexivity;
+  m_mapKeyToWordFormPropHandler["aspect"] = fnAspect;
+  m_mapKeyToWordFormPropHandler["status"] = fnStatus;
+  m_mapKeyToWordFormPropHandler["isIrregular"] = fnIsIrregular;
+  m_mapKeyToWordFormPropHandler["isVariant"] = fnIsVariant;
+  m_mapKeyToWordFormPropHandler["isDifficult"] = fnIsDifficult;
+  m_mapKeyToWordFormPropHandler["leadComment"] = fnLeadCommentWordForm;
+  m_mapKeyToWordFormPropHandler["trailingComment"] = fnTrailingCommentWordForm;
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
@@ -354,14 +547,12 @@ void ZalWeb::SetDbPath(const Napi::CallbackInfo& info)
     Napi::Env env = info.Env();
 
     if (info.Length() < 1) {
-        Napi::TypeError::New(env, "Wrong number of arguments")
-          .ThrowAsJavaScriptException();
+        Napi::TypeError::New(env, "Wrong number of arguments").ThrowAsJavaScriptException();
         return;
     }
 
     if (!info[0].IsString()) {
-        Napi::TypeError::New(env, "Did not receive path to the database.")
-          .ThrowAsJavaScriptException();
+        Napi::TypeError::New(env, "Did not receive path to the database.").ThrowAsJavaScriptException();
         return;
     }
 
@@ -369,16 +560,14 @@ void ZalWeb::SetDbPath(const Napi::CallbackInfo& info)
     auto rc = m_spDictionary->eSetDbPath(sDbPath);
     if (rc != Hlib::H_NO_ERROR)
     {
-        Napi::TypeError::New(env, "Error setting database path.")
-          .ThrowAsJavaScriptException();
+        Napi::TypeError::New(env, "Error setting database path.").ThrowAsJavaScriptException();
     }
 }
 
 void ZalWeb::Clear(const Napi::CallbackInfo& info)
 {
     if (info.Length() != 0) {
-        Napi::TypeError::New(info.Env(), "Wrong number of arguments.")
-          .ThrowAsJavaScriptException();
+        Napi::TypeError::New(info.Env(), "Wrong number of arguments.").ThrowAsJavaScriptException();
         return;
     }
     m_spDictionary->Clear();
@@ -389,22 +578,19 @@ Napi::Value ZalWeb::GetLexemesByInitialForm(const Napi::CallbackInfo& info)
     Napi::Env env = info.Env();
 
     if (info.Length() < 1) {
-      Napi::TypeError::New(env, "Wrong number of arguments")
-          .ThrowAsJavaScriptException();
+      Napi::TypeError::New(env, "Wrong number of arguments").ThrowAsJavaScriptException();
       return Napi::Boolean::New(info.Env(), false);
     }
 
     if (!info[0].IsString()) {
-       Napi::TypeError::New(env, "Did not receive search word.")
-          .ThrowAsJavaScriptException();
+       Napi::TypeError::New(env, "Did not receive search word.").ThrowAsJavaScriptException();
       return Napi::Boolean::New(info.Env(), false);
     }
 
     auto sSearchWord = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
     auto rc = m_spDictionary->eGetLexemesByInitialForm(sSearchWord);
     if (rc != Hlib::H_NO_MORE && rc != Hlib::H_FALSE) {
-       Napi::TypeError::New(env, "Unable to create lexeme enumerator.")
-          .ThrowAsJavaScriptException();
+       Napi::TypeError::New(env, "Unable to create lexeme enumerator.").ThrowAsJavaScriptException();
     }
 
     if (Hlib::H_FALSE == rc) {
@@ -503,7 +689,7 @@ Napi::Value ZalWeb::GetLexemeProperty(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  auto stLexemeProperties = m_spCurrentLexeme->stGetProperties();
+//  auto stLexemeProperties = m_spCurrentLexeme->stGetProperties();
   auto sKey = info[0].As<Napi::String>().Utf8Value();
 
 //  auto itProperty = m_mapStringToProperty.find(sKey);
@@ -544,7 +730,7 @@ Napi::Value ZalWeb::GetInflectionProperty(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  auto& stInflectionProperties = m_spCurrentInflection->stGetProperties();
+//  auto& stInflectionProperties = m_spCurrentInflection->stGetProperties();
   auto sKey = info[0].As<Napi::String>().Utf8Value();
 
 //  auto itProperty = m_mapStringToProperty.find(sKey);
@@ -560,6 +746,100 @@ Napi::Value ZalWeb::GetInflectionProperty(const Napi::CallbackInfo& info)
   }
 
   return itProperty->second(info, m_spCurrentInflection);
+}
+
+Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
+{
+  if (info.Length() < 1) {
+    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+
+  auto sInflectionId = info[0].As<Napi::String>().Utf8Value();
+  std::stringstream s;
+  s << sInflectionId;
+  long long llInflectionId {0};
+  s >> llInflectionId;
+
+// TODO: llInflectionId --> inflection obj
+
+  if (!m_spCurrentInflection) {
+    Napi::TypeError::New(info.Env(), "Inflection pointer is NULL.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto rc = m_spCurrentInflection->eGenerateParadigm();
+  if (rc != Hlib::H_NO_ERROR) {
+    Napi::TypeError::New(info.Env(), "Unable to generate paradigm.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  return Napi::Boolean::New(info.Env(), true);
+}
+
+Napi::Value ZalWeb::LoadFirstWordForm(const Napi::CallbackInfo& info)
+{
+  if (!m_spCurrentInflection) {
+    Napi::TypeError::New(info.Env(), "Inflection pointer is NULL.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto rc = m_spCurrentInflection->eGetFirstWordForm(m_spCurrentWordForm);
+  if (rc != Hlib::H_NO_ERROR) {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  return Napi::Boolean::New(info.Env(), true);
+}
+
+Napi::Value ZalWeb::LoadNextWordForm(const Napi::CallbackInfo& info)
+{
+  if (!m_spCurrentInflection) {
+    Napi::TypeError::New(info.Env(), "Inflection pointer is NULL.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto rc = m_spCurrentInflection->eGetNextWordForm(m_spCurrentWordForm);
+  if (rc != Hlib::H_NO_ERROR) {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto sWf = m_spCurrentWordForm->sWordForm();
+  
+  return Napi::Boolean::New(info.Env(), true);
+}
+
+Napi::Value ZalWeb::SetWordFormProperty(const Napi::CallbackInfo& info) 
+{
+  if (info.Length() <= 1) {
+    Napi::TypeError::New(info.Env(), "Expected two arguments.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+  else {
+    return Napi::Boolean::New(info.Env(), true);
+  }
+}
+
+Napi::Value ZalWeb::GetWordFormProperty(const Napi::CallbackInfo& info) 
+{
+  if (info.Length() < 1) {
+    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+
+  if (nullptr == m_spCurrentWordForm) {
+    Napi::TypeError::New(info.Env(), "WordForm pointer is NULL.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto sKey = info[0].As<Napi::String>().Utf8Value();
+  auto itProperty = m_mapKeyToWordFormPropHandler.find(sKey);
+  if (m_mapKeyToWordFormPropHandler.end() == itProperty) {
+    std::cout << "ERROR: property " << sKey << " not found.\n";
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  return itProperty->second(info, m_spCurrentWordForm);
 }
 
 NODE_API_MODULE(addon, InitAll)
