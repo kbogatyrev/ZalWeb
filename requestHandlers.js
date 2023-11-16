@@ -1,16 +1,17 @@
 function wordQuery(searchString, response) {
 
-    var addon = require('bindings')('zal-web.node');
+//    var addon = require('bindings')('zal-web.node');
 //    const addon = require("/home/konstantin/Zal-Web-New/build/Debug/zal-web.node")
 
-    var obj = new addon.ZalWeb();
-    var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master_Full.db3";
-    obj.setDbPath(sDbPath);
+///    var obj = new addon.ZalWeb();
+//    var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master_Full.db3";
+//    obj.setDbPath(sDbPath);
 
     obj.clear();
 
 
     var lexeme = {
+        lexemeId : '',
         sourceForm : '',
         homonyms : [],
         contexts : [],
@@ -39,6 +40,7 @@ function wordQuery(searchString, response) {
     };
 
     var inflection = {
+        inflectionId : '',
         inflectionType : -1,
         accentType1 : '',
         accentType2 : '',
@@ -77,6 +79,7 @@ function wordQuery(searchString, response) {
             return;
         }
 
+        lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
         lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
         lexeme.homonyms = obj.getLexemeProperty("homonyms");
         lexeme.contexts = obj.getLexemeProperty("contexts");
@@ -109,6 +112,7 @@ function wordQuery(searchString, response) {
             return;
         }
 
+        inflection.inflectionId = obj.getInflectionProperty("inflectionId");
         inflection.inflectionType = obj.getInflectionProperty("inflectionType");
         inflection.accentType1 = obj.getInflectionProperty("accentType1");
         inflection.accentType2 = obj.getInflectionProperty("accentType2");
@@ -127,11 +131,94 @@ function wordQuery(searchString, response) {
         var json = JSON.stringify(lexeme);
         console.log(JSON.parse(json));
         response.write(json);
+
+        import ("uuid");
     
     } while (obj.loadNextLexeme());
    
     response.end();
-}
+
+}   // wordQuery()
+
+function paradigmQuery(inflectionId, response) {
+
+    var wordForm = {
+        wordForm : '',
+        stem : '',
+        ending : '',
+        partOfSpeech : '',
+        case : '',
+        subParadigm : '',
+        number : '',
+        gender : '',
+        person : '',
+        animacy : '',
+        reflexivity : '',
+        aspect : '',
+        status : '',
+        isIrregular : false,
+        isVariant : false,
+        isDifficult : false,
+        leadComent : '',
+        trailingComment : ''
+    };
+
+    var paradigm = {
+        wordForms : []
+    };
+
+    response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
+
+    try {
+        var bGenerated = obj.generateParadigm(inflectionId);
+        if (!bGenerated) {
+            console.log("Failed to generate paradigm for inflection ID %s.", inflectionId);
+            response.write("Failed to generate paradigm.");
+            response.end();
+            return;
+        }
+
+        var bWordFormLoaded = obj.loadFirstWordForm();
+        if (!bWordFormLoaded) {
+            console.log("loadFirstWordForm() failed.");
+            response.write("Internal error.");
+            response.end();
+            return;
+        }
+
+        do {
+            wordForm.wordForm = obj.getWordFormProperty("wordForm");
+            wordForm.stem = obj.getWordFormProperty("stem");
+            wordForm.ending = obj.getWordFormProperty("ending");
+            wordForm.partOfSpeech = obj.getWordFormProperty("partOfSpeech");
+            wordForm.case = obj.getWordFormProperty("case");
+            wordForm.subParadigm = obj.getWordFormProperty("subParadigm");
+            wordForm.number = obj.getWordFormProperty("number");
+            wordForm.gender = obj.getWordFormProperty("gender");
+            wordForm.person = obj.getWordFormProperty("person");
+            wordForm.animacy = obj.getWordFormProperty("animacy");
+            wordForm.reflexivity = obj.getWordFormProperty("reflexivity");
+            wordForm.aspect = obj.getWordFormProperty("aspect");
+            wordForm.status = obj.getWordFormProperty("status");
+            wordForm.isIrregular = obj.getWordFormProperty("isIrregular");
+            wordForm.isVariant = obj.getWordFormProperty("isVariant");
+            wordForm.isDifficult = obj.getWordFormProperty("isDifficult");
+            wordForm.leadComent = obj.getWordFormProperty("leadComment");
+            wordForm.trailingComment = obj.getWordFormProperty("trailingComment");
+
+            paradigm.wordForms.push(JSON.parse(JSON.stringify(wordForm)));
+            
+        } while (obj.loadNextWordForm());
+
+        var json = JSON.stringify(paradigm);
+        console.log(JSON.parse(json));
+        response.write(json);               
+        response.end();
+    }
+    catch (exc) {
+        console.log("NodeJS exception: %s", exc.message);
+    }
+}   // paradigmQuery()
 
 function wordParse(response) {
     console.log("Request handler 'wordParse' was called.");
@@ -139,5 +226,12 @@ function wordParse(response) {
     response.write("============================== wordParse");
     response.end();
 }
+
+var addon = require('bindings')('zal-web.node');
+var obj = new addon.ZalWeb();
+var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master_Full.db3";
+obj.setDbPath(sDbPath);
+
 exports.wordQuery = wordQuery;
+exports.paradigmQuery = paradigmQuery;
 //exports.wordParse = wordParse;
