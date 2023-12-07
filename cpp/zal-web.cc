@@ -8,6 +8,7 @@
 #include "Lexeme.h"
 #include "Inflection.h"
 #include "WordForm.h"
+#include "Analytics.h"
 #include "zal-web.h"
 
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
@@ -32,7 +33,10 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
                                    InstanceMethod("getInflectionProperty", &ZalWeb::GetInflectionProperty),
                                    InstanceMethod("generateParadigm", &ZalWeb::GenerateParadigm),
                                    InstanceMethod("setWordFormProperty", &ZalWeb::SetWordFormProperty),
-                                   InstanceMethod("getWordFormProperty", &ZalWeb::GetWordFormProperty) });
+                                   InstanceMethod("getWordFormProperty", &ZalWeb::GetWordFormProperty),
+                                   InstanceMethod("loadFirstParagraph", &ZalWeb::LoadFirstParagraph),
+                                   InstanceMethod("loadNextParagraph", &ZalWeb::LoadNextParagraph),
+                                   InstanceMethod("paragraphSize", &ZalWeb::ParagraphSize) });
   Napi::FunctionReference* constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
   env.SetInstanceData(constructor);
@@ -463,6 +467,51 @@ fnHandlerWordForm fnTrailingCommentWordForm = [](const Napi::CallbackInfo& info,
 
 // -------------------------------------------------------------------------------------------
 
+fnHandlerWordInText fnLineNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+  return Napi::Number::New(info.Env(), stWord.llLineNum);
+};
+
+fnHandlerWordInText fnWordNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+  return Napi::Number::New(info.Env(), stWord.iSeqNum);
+};
+
+fnHandlerWordInText fnWordSource = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+  return Napi::String::New(info.Env(), stWord.sWord.stl_sToUtf8());
+};
+
+fnHandlerWordInText fnStressPositions = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+    if (stWord.vecStressPositions.size() > 0) {
+      Napi::Int32Array arrPositions = Napi::Int32Array::New(info.Env(), stWord.vecStressPositions.size());
+      for (int iAt = 0; iAt < stWord.vecStressPositions.size(); ++iAt)
+      {
+        arrPositions[(size_t)iAt] = stWord.vecStressPositions[iAt];
+      }
+      return arrPositions;
+    } else {
+      return Napi::Boolean::New(info.Env(), false);
+    }
+};
+
+fnHandlerWordInText fnGramHashes = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+    if (stWord.vecGramHashes.size() > 0) {
+      Napi::Array arrGramHashes = Napi::Array::New(info.Env(), stWord.vecGramHashes.size());
+      for (int iAt = 0; iAt < stWord.vecGramHashes.size(); ++iAt)
+      {
+        arrGramHashes[(size_t)iAt] = Hlib::CEString::stl_sToUtf8(stWord.vecGramHashes[iAt]);
+      }
+      return arrGramHashes;
+    } else {
+      return Napi::Boolean::New(info.Env(), false);
+    }
+};
+
+// -------------------------------------------------------------------------------------------
+
 ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info) 
 {  
 //  Napi::Env env = info.Env();
@@ -480,6 +529,16 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   if (rc != Hlib::H_NO_ERROR)
   {
       Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.").ThrowAsJavaScriptException();
+  }
+
+  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master_Tsvetaeva.db3";
+    auto ret = m_spDictionary->eSetDbPath(sDbPath);
+
+
+  rc = m_spDictionary->eGetAnalytics(m_spAnalytics);
+  if (rc != Hlib::H_NO_ERROR || !m_spAnalytics)
+  {
+      Napi::TypeError::New(info.Env(), "Error accessing analytics module.").ThrowAsJavaScriptException();
   }
 
   m_mapKeyToLexemePropHandler["lexemeId"] = fnLexemeId;
@@ -540,6 +599,11 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToWordFormPropHandler["isDifficult"] = fnIsDifficult;
   m_mapKeyToWordFormPropHandler["leadComment"] = fnLeadCommentWordForm;
   m_mapKeyToWordFormPropHandler["trailingComment"] = fnTrailingCommentWordForm;
+
+  m_mapKeyToWordInTextHandler["lineNum"] = fnLineNum;
+  m_mapKeyToWordInTextHandler["wordNum"] = fnWordNum;
+  m_mapKeyToWordInTextHandler["stressPositions"] = fnStressPositions;
+  m_mapKeyToWordInTextHandler["wordSource"] = fnWordSource;
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
@@ -655,7 +719,6 @@ Napi::Value ZalWeb::LoadFirstInflection(const Napi::CallbackInfo& info)
     ERROR_LOG(L"Inflection instance is NULL.");
     return Napi::Boolean::New(info.Env(), false);
   }
-
   return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -700,7 +763,11 @@ Napi::Value ZalWeb::GetLexemeProperty(const Napi::CallbackInfo& info)
 
   auto itProperty = m_mapKeyToLexemePropHandler.find(sKey);
   if (m_mapKeyToLexemePropHandler.end() == itProperty) {
-    std::cout << "ERROR: property " << sKey << " not found.\n";
+//    std::cout << "ERROR: property " << sKey << " not found.\n";
+    Hlib::CEString sMsg(L"Property ");
+    sMsg += Hlib::CEString::sFromUtf8(sKey);
+    sMsg += L" not found.";
+    ERROR_LOG(sMsg);
     return Napi::Boolean::New(info.Env(), false);
   }
 
@@ -741,10 +808,13 @@ Napi::Value ZalWeb::GetInflectionProperty(const Napi::CallbackInfo& info)
 
   auto itProperty = m_mapKeyToInflectionPropHandler.find(sKey);
   if (m_mapKeyToInflectionPropHandler.end() == itProperty) {
-    std::cout << "ERROR: property " << sKey << " not found.\n";
+//    std::cout << "ERROR: property " << sKey << " not found.\n";
+    Hlib::CEString sMsg(L"Property ");
+    sMsg += Hlib::CEString::sFromUtf8(sKey);
+    sMsg += L" not found.";
+    ERROR_LOG(sMsg);
     return Napi::Boolean::New(info.Env(), false);
   }
-
   return itProperty->second(info, m_spCurrentInflection);
 }
 
@@ -755,11 +825,11 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);   
   }
 
-  auto sInflectionId = info[0].As<Napi::String>().Utf8Value();
-  std::stringstream s;
-  s << sInflectionId;
-  long long llInflectionId {0};
-  s >> llInflectionId;
+//  auto sInflectionId = info[0].As<Napi::String>().Utf8Value();
+//  std::stringstream s;
+//  s << sInflectionId;
+//  long long llInflectionId {0};
+//  s >> llInflectionId;
 
 // TODO: llInflectionId --> inflection obj
 
@@ -773,7 +843,6 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
     Napi::TypeError::New(info.Env(), "Unable to generate paradigm.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
-
   return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -788,7 +857,6 @@ Napi::Value ZalWeb::LoadFirstWordForm(const Napi::CallbackInfo& info)
   if (rc != Hlib::H_NO_ERROR) {
     return Napi::Boolean::New(info.Env(), false);
   }
-
   return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -803,9 +871,6 @@ Napi::Value ZalWeb::LoadNextWordForm(const Napi::CallbackInfo& info)
   if (rc != Hlib::H_NO_ERROR) {
     return Napi::Boolean::New(info.Env(), false);
   }
-
-  auto sWf = m_spCurrentWordForm->sWordForm();
-  
   return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -835,11 +900,90 @@ Napi::Value ZalWeb::GetWordFormProperty(const Napi::CallbackInfo& info)
   auto sKey = info[0].As<Napi::String>().Utf8Value();
   auto itProperty = m_mapKeyToWordFormPropHandler.find(sKey);
   if (m_mapKeyToWordFormPropHandler.end() == itProperty) {
-    std::cout << "ERROR: property " << sKey << " not found.\n";
+//    std::cout << "ERROR: property " << sKey << " not found.\n";
+    Hlib::CEString sMsg(L"Property ");
+    sMsg += Hlib::CEString::sFromUtf8(sKey);
+    sMsg += L" not found.";
+    ERROR_LOG(sMsg);
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return itProperty->second(info, m_spCurrentWordForm);
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+Napi::Value ZalWeb::GetWordInTextProperty(const Napi::CallbackInfo& info) 
+{
+  if (info.Length() < 2) {
+    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+
+  if (!info[0].IsNumber()) {
+    ERROR_LOG(L"Argument must be numeric.");
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  return itProperty->second(info, m_spCurrentWordForm);
+  auto uiAt = info[0].As<Napi::Number>().Uint32Value();
+  if (uiAt > m_vecWordsInParagraph.size())
+  {
+    ERROR_LOG(L"Word index out of bounds.")
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  
+  auto sKey = info[1].As<Napi::String>().Utf8Value();
+  auto itProperty = m_mapKeyToWordInTextHandler.find(sKey);
+  if (m_mapKeyToWordInTextHandler.end() == itProperty) {
+    Hlib::CEString sMsg(L"Property ");
+    sMsg += Hlib::CEString::sFromUtf8(sKey);
+    sMsg += L" not found.";
+    ERROR_LOG(sMsg);
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return itProperty->second(info, m_vecWordsInParagraph[uiAt]);
 }
+
+Napi::Value ZalWeb::LoadFirstParagraph(const Napi::CallbackInfo& info)
+{
+  if (!m_spDictionary) {
+    Napi::TypeError::New(info.Env(), "Dictionary is not initialized.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  if (!m_spAnalytics)
+  {
+      Napi::TypeError::New(info.Env(), "Error accessing analytics module.").ThrowAsJavaScriptException();
+  }
+
+  Hlib::CEString sLine;
+  auto rc = m_spAnalytics->eGetFirstLineParse(sLine, m_vecWordsInParagraph, 0);
+  if (rc != Hlib::H_NO_ERROR) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve first line or paragraph.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::Boolean::New(info.Env(), true);
+}
+
+Napi::Value ZalWeb::LoadNextParagraph(const Napi::CallbackInfo& info)
+{
+  if (!m_spAnalytics) {
+    Napi::TypeError::New(info.Env(), "Analytics module is not initialized.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  Hlib::CEString sLine;
+  auto rc = m_spAnalytics->eGetNextLineParse(sLine, m_vecWordsInParagraph);
+  if (rc != Hlib::H_NO_ERROR) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve line or paragraph.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::Boolean::New(info.Env(), true);
+}
+
+Napi::Value ZalWeb::ParagraphSize(const Napi::CallbackInfo& info)
+{
+  return Napi::Number::New(info.Env(), m_vecWordsInParagraph.size());
+}
+
 
 NODE_API_MODULE(addon, InitAll)

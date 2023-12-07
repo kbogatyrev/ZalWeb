@@ -11,6 +11,7 @@
 using fnHandlerLexeme = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme>)>;
 using fnHandlerInflection = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection>)>;
 using fnHandlerWordForm = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm>)>;
+using fnHandlerWordInText = std::function<Napi::Value(const Napi::CallbackInfo& info, Hlib::StWordContext)>;
 
 static std::map<Hlib::ET_AccentType, std::string> MapAccentTypeToString {
   { Hlib::ET_AccentType::AT_UNDEFINED, "" },
@@ -154,43 +155,56 @@ static std::map<Hlib::ET_Status, std::string> MapStatusToString {
 };
 
 class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
- public:
-  static Napi::Object Init(Napi::Env env, Napi::Object exports);
-  ZalWeb(const Napi::CallbackInfo& info);
+  public:
+    static Napi::Object Init(Napi::Env env, Napi::Object exports);
+    ZalWeb(const Napi::CallbackInfo& info);
 
- private:
-  void SetDbPath(const Napi::CallbackInfo& info);
-  void Clear(const Napi::CallbackInfo& info);
+// private:
+    void SetDbPath(const Napi::CallbackInfo& info);
+    void Clear(const Napi::CallbackInfo& info);
 //  void InitPropertyHandlers();
-  Napi::Value GetLexemesByInitialForm(const Napi::CallbackInfo& info);
-  Napi::Value LoadFirstLexeme(const Napi::CallbackInfo& info);
-  Napi::Value LoadNextLexeme(const Napi::CallbackInfo& info);
-  Napi::Value GetLexemeProperty(const Napi::CallbackInfo& info);
-  Napi::Value SetLexemeProperty(const Napi::CallbackInfo& info);
-  Napi::Value LoadFirstInflection(const Napi::CallbackInfo& info);
-  Napi::Value LoadNextInflection(const Napi::CallbackInfo& info);
-  Napi::Value GetInflectionProperty(const Napi::CallbackInfo& info);
-  Napi::Value SetInflectionProperty(const Napi::CallbackInfo& info);
-  Napi::Value GenerateParadigm(const Napi::CallbackInfo& info);
-  Napi::Value LoadFirstWordForm(const Napi::CallbackInfo& info);
-  Napi::Value LoadNextWordForm(const Napi::CallbackInfo& info);
-  Napi::Value GetWordFormProperty(const Napi::CallbackInfo& info);
-  Napi::Value SetWordFormProperty(const Napi::CallbackInfo& info);
 
-  shared_ptr <Hlib::CDictionary> m_spDictionary;
+    //
+    //  Dictionary
+    //
+    Napi::Value GetLexemesByInitialForm(const Napi::CallbackInfo& info);
+    Napi::Value LoadFirstLexeme(const Napi::CallbackInfo& info);
+    Napi::Value LoadNextLexeme(const Napi::CallbackInfo& info);
+    Napi::Value GetLexemeProperty(const Napi::CallbackInfo& info);
+    Napi::Value SetLexemeProperty(const Napi::CallbackInfo& info);
+    Napi::Value LoadFirstInflection(const Napi::CallbackInfo& info);
+    Napi::Value LoadNextInflection(const Napi::CallbackInfo& info);
+    Napi::Value GetInflectionProperty(const Napi::CallbackInfo& info);
+    Napi::Value SetInflectionProperty(const Napi::CallbackInfo& info);
+    Napi::Value GenerateParadigm(const Napi::CallbackInfo& info);
+    Napi::Value LoadFirstWordForm(const Napi::CallbackInfo& info);
+    Napi::Value LoadNextWordForm(const Napi::CallbackInfo& info);
+    Napi::Value GetWordFormProperty(const Napi::CallbackInfo& info);
+    Napi::Value SetWordFormProperty(const Napi::CallbackInfo& info);
 
-  shared_ptr <Hlib::CLexemeEnumerator> m_spLexemeEnumerator;
-  shared_ptr <Hlib::CLexeme> m_spCurrentLexeme;
+    //
+    //  Manual text editing
+    //
+    Napi::Value LoadFirstParagraph(const Napi::CallbackInfo& info);
+    Napi::Value LoadNextParagraph(const Napi::CallbackInfo& info);
+    Napi::Value ParagraphSize(const Napi::CallbackInfo& info);
+    Napi::Value GetWordInTextProperty(const Napi::CallbackInfo& info);
 
-  shared_ptr<Hlib::CInflectionEnumerator> m_spInflectionEnumerator;  
-  shared_ptr<Hlib::CInflection> m_spCurrentInflection;
+  private:
+    shared_ptr<Hlib::CDictionary> m_spDictionary;
+    shared_ptr<Hlib::CLexemeEnumerator> m_spLexemeEnumerator;
+    shared_ptr<Hlib::CLexeme> m_spCurrentLexeme;
+    shared_ptr<Hlib::CInflectionEnumerator> m_spInflectionEnumerator;  
+    shared_ptr<Hlib::CInflection> m_spCurrentInflection;
+    shared_ptr<Hlib::CWordForm> m_spCurrentWordForm;
+    shared_ptr<Hlib::CAnalytics> m_spAnalytics;
 
-  shared_ptr<Hlib::CWordForm> m_spCurrentWordForm;
+    std::vector<Hlib::StWordContext> m_vecWordsInParagraph;
 
-  std::map<string, fnHandlerLexeme> m_mapKeyToLexemePropHandler;
-  std::map<string, fnHandlerInflection> m_mapKeyToInflectionPropHandler;
-  std::map<string, fnHandlerWordForm> m_mapKeyToWordFormPropHandler;
-
+    std::map<string, fnHandlerLexeme> m_mapKeyToLexemePropHandler;
+    std::map<string, fnHandlerInflection> m_mapKeyToInflectionPropHandler;
+    std::map<string, fnHandlerWordForm> m_mapKeyToWordFormPropHandler;
+    std::map<string, fnHandlerWordInText> m_mapKeyToWordInTextHandler;
 };
 
 #endif
