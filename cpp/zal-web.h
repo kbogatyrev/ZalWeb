@@ -7,6 +7,7 @@
 #include <napi.h>
 #include "Dictionary.h"
 #include "Lexeme.h"
+#include "EString.h"
 
 using fnHandlerLexeme = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme>)>;
 using fnHandlerInflection = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection>)>;
@@ -185,10 +186,10 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
     //
     //  Manual text editing
     //
-    Napi::Value LoadFirstParagraph(const Napi::CallbackInfo& info);
-    Napi::Value LoadNextParagraph(const Napi::CallbackInfo& info);
-    Napi::Value ParagraphSize(const Napi::CallbackInfo& info);
+    Napi::Value LoadFirstSegment(const Napi::CallbackInfo& info);
+    Napi::Value LoadNextSegment(const Napi::CallbackInfo& info);
     Napi::Value GetWordInTextProperty(const Napi::CallbackInfo& info);
+    Napi::Value SegmentSize(const Napi::CallbackInfo& info);
 
   private:
     shared_ptr<Hlib::CDictionary> m_spDictionary;
@@ -199,7 +200,10 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
     shared_ptr<Hlib::CWordForm> m_spCurrentWordForm;
     shared_ptr<Hlib::CAnalytics> m_spAnalytics;
 
-    std::vector<Hlib::StWordContext> m_vecWordsInParagraph;
+    std::map<int64_t, std::vector<Hlib::StWordContext>> m_mapWordsInSegment; // word, stress, gram hash
+    std::map<int64_t, Hlib::CEString> m_mapSegments;  // text
+    std::map<int64_t, int64_t> m_mapSegNumToDbId;     // sequential number of the segment in read order -> db ID
+    int m_iSegmentCount{0};
 
     std::map<string, fnHandlerLexeme> m_mapKeyToLexemePropHandler;
     std::map<string, fnHandlerInflection> m_mapKeyToInflectionPropHandler;

@@ -5,4 +5,6 @@ var handle = {};
 handle["/query"] = requestHandlers.wordQuery;
 handle["/forms"] = requestHandlers.paradigmQuery;
 handle["/parse"] = requestHandlers.wordParse;
+handle["/text"] = requestHandlers.textQuery;
+console.log(handle);
 server.start(router.route, handle);

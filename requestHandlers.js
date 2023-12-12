@@ -1,12 +1,5 @@
 function wordQuery(searchString, response) {
 
-//    var addon = require('bindings')('zal-web.node');
-//    const addon = require("/home/konstantin/Zal-Web-New/build/Debug/zal-web.node")
-
-///    var obj = new addon.ZalWeb();
-//    var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master_Full.db3";
-//    obj.setDbPath(sDbPath);
-
     obj.clear();
 
 
@@ -67,13 +60,13 @@ function wordQuery(searchString, response) {
         }
     }
     catch (exc) {
-        console.log("NodeJS exception: %s", exc.message);
+        console.error("NodeJS exception: %s", exc.message);
     }
 
     do {
         var bLexemeLoaded = obj.loadFirstLexeme();
         if (!bLexemeLoaded) {
-            console.log("loadFirstLexeme() failed");
+            console.error("loadFirstLexeme() failed");
             response.write("Internal error");
             response.end();
             return;
@@ -106,7 +99,7 @@ function wordQuery(searchString, response) {
         
         var bInflectionLoaded = obj.loadFirstInflection();
         if (!bInflectionLoaded) {
-            console.log("loadFirstInflection() failed");
+            console.error("loadFirstInflection() failed");
             response.write("Internal error");
             response.end();
             return;
@@ -141,7 +134,6 @@ function wordQuery(searchString, response) {
 }   // wordQuery()
 
 function paradigmQuery(inflectionId, response) {
-
     var wordForm = {
         wordForm : '',
         stem : '',
@@ -172,7 +164,7 @@ function paradigmQuery(inflectionId, response) {
     try {
         var bGenerated = obj.generateParadigm(inflectionId);
         if (!bGenerated) {
-            console.log("Failed to generate paradigm for inflection ID %s.", inflectionId);
+            console.error("Failed to generate paradigm for inflection ID %s.", inflectionId);
             response.write("Failed to generate paradigm.");
             response.end();
             return;
@@ -180,7 +172,7 @@ function paradigmQuery(inflectionId, response) {
 
         var bWordFormLoaded = obj.loadFirstWordForm();
         if (!bWordFormLoaded) {
-            console.log("loadFirstWordForm() failed.");
+            console.error("loadFirstWordForm() failed.");
             response.write("Internal error.");
             response.end();
             return;
@@ -216,7 +208,7 @@ function paradigmQuery(inflectionId, response) {
         response.end();
     }
     catch (exc) {
-        console.log("NodeJS exception: %s", exc.message);
+        console.error("NodeJS exception: %s", exc.message);
     }
 }   // paradigmQuery()
 
@@ -227,11 +219,53 @@ function wordParse(response) {
     response.end();
 }
 
+function Word(seqNum, wordSource, stressPositions, gramHashes) {
+//    this.segmentId = segmentId;
+    this.seqNum = seqNum;
+    this.wordSource = wordSource;
+    this.stressPositions = stressPositions;
+    this.gramHashes = gramHashes;
+}
+
+function formatSegment(segNum, segObj, text) {
+    for (let at = 0; at < segObj.segmentSize(segNum); ++at) {
+        const word = new Word(segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
+                              segObj.getWordInTextProperty(segNum, at, 'wordSource'), 
+                              segObj.getWordInTextProperty(segNum, at, 'stressPositions'), 
+                              segObj.getWordInTextProperty(segNum, at, 'gramHashes'));
+        text.push(word);
+    }
+}
+
+// arguments: (1) 1st segment id, (2) num of segments to show
+// e.g., HTTP GET /text&startIdx=0&size=2
+function textQuery(start_idx, size, response) {
+    let text = [];
+    var rc = obj.loadFirstSegment();
+    formatSegment(0, obj, text)
+//    console.log(text);
+
+    for (let segIdx = 1; segIdx < size; ++segIdx) {
+        bRet = obj.loadNextSegment();
+        if (!bRet) {
+            break;
+        }
+        formatSegment(segIdx, obj, text)
+    }
+
+    response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
+    var json = JSON.stringify(text);
+//    console.log(JSON.parse(json));
+    response.write(json);
+    response.end();
+}
+
 var addon = require('bindings')('zal-web.node');
 var obj = new addon.ZalWeb();
-var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master_Full.db3";
-obj.setDbPath(sDbPath);
+//var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master_Full.db3";
+//obj.setDbPath(sDbPath);
 
 exports.wordQuery = wordQuery;
 exports.paradigmQuery = paradigmQuery;
 //exports.wordParse = wordParse;
+exports.textQuery = textQuery;

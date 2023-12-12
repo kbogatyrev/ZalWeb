@@ -34,9 +34,10 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
                                    InstanceMethod("generateParadigm", &ZalWeb::GenerateParadigm),
                                    InstanceMethod("setWordFormProperty", &ZalWeb::SetWordFormProperty),
                                    InstanceMethod("getWordFormProperty", &ZalWeb::GetWordFormProperty),
-                                   InstanceMethod("loadFirstParagraph", &ZalWeb::LoadFirstParagraph),
-                                   InstanceMethod("loadNextParagraph", &ZalWeb::LoadNextParagraph),
-                                   InstanceMethod("paragraphSize", &ZalWeb::ParagraphSize) });
+                                   InstanceMethod("loadFirstSegment", &ZalWeb::LoadFirstSegment),
+                                   InstanceMethod("loadNextSegment", &ZalWeb::LoadNextSegment),
+                                   InstanceMethod("segmentSize", &ZalWeb::SegmentSize),
+                                   InstanceMethod("getWordInTextProperty", &ZalWeb::GetWordInTextProperty) });
   Napi::FunctionReference* constructor = new Napi::FunctionReference();
   *constructor = Napi::Persistent(func);
   env.SetInstanceData(constructor);
@@ -467,12 +468,12 @@ fnHandlerWordForm fnTrailingCommentWordForm = [](const Napi::CallbackInfo& info,
 
 // -------------------------------------------------------------------------------------------
 
-fnHandlerWordInText fnLineNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
-{
-  return Napi::Number::New(info.Env(), stWord.llLineNum);
-};
+//fnHandlerWordInText fnLineNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+//{
+//  return Napi::Number::New(info.Env(), stWord.llSegmentId);
+//};
 
-fnHandlerWordInText fnWordNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+fnHandlerWordInText fnSeqNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
 {
   return Napi::Number::New(info.Env(), stWord.iSeqNum);
 };
@@ -600,10 +601,10 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToWordFormPropHandler["leadComment"] = fnLeadCommentWordForm;
   m_mapKeyToWordFormPropHandler["trailingComment"] = fnTrailingCommentWordForm;
 
-  m_mapKeyToWordInTextHandler["lineNum"] = fnLineNum;
-  m_mapKeyToWordInTextHandler["wordNum"] = fnWordNum;
-  m_mapKeyToWordInTextHandler["stressPositions"] = fnStressPositions;
+  m_mapKeyToWordInTextHandler["seqNum"] = fnSeqNum;
   m_mapKeyToWordInTextHandler["wordSource"] = fnWordSource;
+  m_mapKeyToWordInTextHandler["stressPositions"] = fnStressPositions;
+  m_mapKeyToWordInTextHandler["gramHashes"] = fnGramHashes;
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
@@ -914,24 +915,44 @@ Napi::Value ZalWeb::GetWordFormProperty(const Napi::CallbackInfo& info)
 
 Napi::Value ZalWeb::GetWordInTextProperty(const Napi::CallbackInfo& info) 
 {
-  if (info.Length() < 2) {
+  // Args: Index of the segment (line or paragraph), index of the word in segment, property name
+
+  if (info.Length() < 3) {
     Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);   
   }
 
+  // Segment idx
   if (!info[0].IsNumber()) {
     ERROR_LOG(L"Argument must be numeric.");
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  auto uiAt = info[0].As<Napi::Number>().Uint32Value();
-  if (uiAt > m_vecWordsInParagraph.size())
+  auto uiSegment = info[0].As<Napi::Number>().Uint32Value();
+  if (uiSegment > m_mapSegments.size() || uiSegment > m_mapSegNumToDbId.size())
+  {
+    ERROR_LOG(L"Segment index out of bounds.")
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  
+  auto uiDbId = m_mapSegNumToDbId[uiSegment];
+  auto& vecWordsInSegment = m_mapWordsInSegment[uiDbId];
+
+  // Word pos
+  if (!info[1].IsNumber()) {
+    ERROR_LOG(L"Argument must be numeric.");
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto uiWordIdx = info[1].As<Napi::Number>().Uint32Value();
+  if (uiWordIdx > vecWordsInSegment.size())
   {
     ERROR_LOG(L"Word index out of bounds.")
     return Napi::Boolean::New(info.Env(), false);
   }
-  
-  auto sKey = info[1].As<Napi::String>().Utf8Value();
+
+  // Property to return
+  auto sKey = info[2].As<Napi::String>().Utf8Value();
   auto itProperty = m_mapKeyToWordInTextHandler.find(sKey);
   if (m_mapKeyToWordInTextHandler.end() == itProperty) {
     Hlib::CEString sMsg(L"Property ");
@@ -940,10 +961,11 @@ Napi::Value ZalWeb::GetWordInTextProperty(const Napi::CallbackInfo& info)
     ERROR_LOG(sMsg);
     return Napi::Boolean::New(info.Env(), false);
   }
-  return itProperty->second(info, m_vecWordsInParagraph[uiAt]);
+
+  return itProperty->second(info, vecWordsInSegment[uiWordIdx]);
 }
 
-Napi::Value ZalWeb::LoadFirstParagraph(const Napi::CallbackInfo& info)
+Napi::Value ZalWeb::LoadFirstSegment(const Napi::CallbackInfo& info)
 {
   if (!m_spDictionary) {
     Napi::TypeError::New(info.Env(), "Dictionary is not initialized.").ThrowAsJavaScriptException();
@@ -955,34 +977,71 @@ Napi::Value ZalWeb::LoadFirstParagraph(const Napi::CallbackInfo& info)
       Napi::TypeError::New(info.Env(), "Error accessing analytics module.").ThrowAsJavaScriptException();
   }
 
-  Hlib::CEString sLine;
-  auto rc = m_spAnalytics->eGetFirstLineParse(sLine, m_vecWordsInParagraph, 0);
+  int64_t llSegmentId{-1};
+  Hlib::CEString sText;
+  std::vector<Hlib::StWordContext> vecWordsInSegment;
+  auto rc = m_spAnalytics->eGetFirstSegment(llSegmentId, sText, vecWordsInSegment, 0);
   if (rc != Hlib::H_NO_ERROR) {
     Napi::TypeError::New(info.Env(), "Failed to retrieve first line or paragraph.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
+
+  m_mapWordsInSegment[llSegmentId] = vecWordsInSegment;
+  m_mapSegments[llSegmentId] = sText;
+  m_iSegmentCount = 0;
+  m_mapSegNumToDbId[m_iSegmentCount++] = llSegmentId;
+
   return Napi::Boolean::New(info.Env(), true);
 }
 
-Napi::Value ZalWeb::LoadNextParagraph(const Napi::CallbackInfo& info)
+Napi::Value ZalWeb::LoadNextSegment(const Napi::CallbackInfo& info)
 {
   if (!m_spAnalytics) {
     Napi::TypeError::New(info.Env(), "Analytics module is not initialized.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  Hlib::CEString sLine;
-  auto rc = m_spAnalytics->eGetNextLineParse(sLine, m_vecWordsInParagraph);
+  int64_t llSegmentId{-1};
+  Hlib::CEString sText;
+  std::vector<Hlib::StWordContext> vecWordsInSegment;
+  auto rc = m_spAnalytics->eGetNextSegment(llSegmentId, sText, vecWordsInSegment);
   if (rc != Hlib::H_NO_ERROR) {
     Napi::TypeError::New(info.Env(), "Failed to retrieve line or paragraph.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
+
+  m_mapWordsInSegment[llSegmentId] = vecWordsInSegment;
+  m_mapSegments[llSegmentId] = sText;
+  m_mapSegNumToDbId[m_iSegmentCount++] = llSegmentId;
+
   return Napi::Boolean::New(info.Env(), true);
 }
 
-Napi::Value ZalWeb::ParagraphSize(const Napi::CallbackInfo& info)
+Napi::Value ZalWeb::SegmentSize(const Napi::CallbackInfo& info)
 {
-  return Napi::Number::New(info.Env(), m_vecWordsInParagraph.size());
+  // Args: Index of the segment (line of paragraph)
+
+  if (info.Length() < 1) {
+    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+
+  // Segment idx
+  if (!info[0].IsNumber()) {
+    ERROR_LOG(L"Argument must be numeric.");
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto uiSegment = info[0].As<Napi::Number>().Uint32Value();
+  if (uiSegment >= m_mapSegments.size() || uiSegment >= m_mapWordsInSegment.size() )
+  {
+    ERROR_LOG(L"Segment index out of bounds.")
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto iSegId = m_mapSegNumToDbId[uiSegment];
+
+  return Napi::Number::New(info.Env(), m_mapWordsInSegment[iSegId].size());
 }
 
 
