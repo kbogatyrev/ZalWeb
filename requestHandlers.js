@@ -219,8 +219,10 @@ function wordParse(response) {
     response.end();
 }
 
-function Word(seqNum, wordSource, stressPositions, gramHashes) {
-//    this.segmentId = segmentId;
+function Word(incompleteParse, lineBreak, segmentId, seqNum, wordSource, stressPositions, gramHashes) {
+    this.incompleteParse = incompleteParse;
+    this.lineBreak = lineBreak;
+    this.segmentId = segmentId;
     this.seqNum = seqNum;
     this.wordSource = wordSource;
     this.stressPositions = stressPositions;
@@ -229,7 +231,10 @@ function Word(seqNum, wordSource, stressPositions, gramHashes) {
 
 function formatSegment(segNum, segObj, text) {
     for (let at = 0; at < segObj.segmentSize(segNum); ++at) {
-        const word = new Word(segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
+        const word = new Word(segObj.getWordInTextProperty(segNum, at, 'incompleteParse'), 
+                              segObj.getWordInTextProperty(segNum, at, 'lineBreak'), 
+                              segObj.getWordInTextProperty(segNum, at, 'segmentId'), 
+                              segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
                               segObj.getWordInTextProperty(segNum, at, 'wordSource'), 
                               segObj.getWordInTextProperty(segNum, at, 'stressPositions'), 
                               segObj.getWordInTextProperty(segNum, at, 'gramHashes'));
@@ -241,11 +246,12 @@ function formatSegment(segNum, segObj, text) {
 // e.g., HTTP GET /text&startIdx=0&size=2
 function textQuery(start_idx, size, response) {
     let text = [];
-    var rc = obj.loadFirstSegment();
-    formatSegment(0, obj, text)
+    var rc = obj.loadFirstSegment(start_idx);
+    formatSegment(0, obj, text);
 //    console.log(text);
 
     for (let segIdx = 1; segIdx < size; ++segIdx) {
+console.log('------------------------- '+segIdx)        ;
         bRet = obj.loadNextSegment();
         if (!bRet) {
             break;

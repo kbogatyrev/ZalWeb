@@ -20,14 +20,14 @@ function route(handle, pathname, params, response) {
             handle[pathname](word, response);
             break;
         case '/forms':
-            const inflectionId = searchParams.get('inflection-id');
+            const inflectionId = parseInt(searchParams.get('inflection-id'), 10);
             handle[pathname](inflectionId, response);
             break;
         case '/parse':
             break;
         case '/text':
-            const start_idx = searchParams.get('start-idx');
-            const size = searchParams.get('size');
+            const start_idx = parseInt(searchParams.get('start-idx'), 10);
+            const size = parseInt(searchParams.get('size'), 10);
             handle[pathname](start_idx, size, response);
             break;
         default:

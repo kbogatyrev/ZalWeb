@@ -468,10 +468,20 @@ fnHandlerWordForm fnTrailingCommentWordForm = [](const Napi::CallbackInfo& info,
 
 // -------------------------------------------------------------------------------------------
 
-//fnHandlerWordInText fnLineNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
-//{
-//  return Napi::Number::New(info.Env(), stWord.llSegmentId);
-//};
+fnHandlerWordInText fnIncompleteParse = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+  return Napi::Boolean::New(info.Env(), stWord.bIncomplete);
+};
+
+fnHandlerWordInText fnLineBreak = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+  return Napi::Boolean::New(info.Env(), stWord.bBreak);
+};
+
+fnHandlerWordInText fnSegmentId = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+{
+  return Napi::Number::New(info.Env(), stWord.llSegmentId);
+};
 
 fnHandlerWordInText fnSeqNum = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
 {
@@ -601,6 +611,9 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToWordFormPropHandler["leadComment"] = fnLeadCommentWordForm;
   m_mapKeyToWordFormPropHandler["trailingComment"] = fnTrailingCommentWordForm;
 
+  m_mapKeyToWordInTextHandler["incompleteParse"] = fnIncompleteParse;
+  m_mapKeyToWordInTextHandler["lineBreak"] = fnLineBreak;
+  m_mapKeyToWordInTextHandler["segmentId"] = fnSegmentId;
   m_mapKeyToWordInTextHandler["seqNum"] = fnSeqNum;
   m_mapKeyToWordInTextHandler["wordSource"] = fnWordSource;
   m_mapKeyToWordInTextHandler["stressPositions"] = fnStressPositions;
@@ -977,15 +990,33 @@ Napi::Value ZalWeb::LoadFirstSegment(const Napi::CallbackInfo& info)
       Napi::TypeError::New(info.Env(), "Error accessing analytics module.").ThrowAsJavaScriptException();
   }
 
-  int64_t llSegmentId{-1};
+  if (info.Length() < 1) {
+    Napi::TypeError::New(Env(), "Expecting one argument").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  if (!info[0].IsNumber()) {
+    Napi::TypeError::New(Env(), "Argument must be numeric.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto iStartAt = info[0].As<Napi::Number>();
+//  auto iStartAt = info[0].ToNumber().Int32Value();
   Hlib::CEString sText;
   std::vector<Hlib::StWordContext> vecWordsInSegment;
-  auto rc = m_spAnalytics->eGetFirstSegment(llSegmentId, sText, vecWordsInSegment, 0);
+  
+  auto rc = m_spAnalytics->eGetFirstSegment(vecWordsInSegment, iStartAt);
   if (rc != Hlib::H_NO_ERROR) {
     Napi::TypeError::New(info.Env(), "Failed to retrieve first line or paragraph.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
+  if (vecWordsInSegment.empty()) {
+    Napi::TypeError::New(info.Env(), "Parse vector is empty.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto llSegmentId = vecWordsInSegment[0].llSegmentId;
   m_mapWordsInSegment[llSegmentId] = vecWordsInSegment;
   m_mapSegments[llSegmentId] = sText;
   m_iSegmentCount = 0;
@@ -1001,15 +1032,20 @@ Napi::Value ZalWeb::LoadNextSegment(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  int64_t llSegmentId{-1};
   Hlib::CEString sText;
   std::vector<Hlib::StWordContext> vecWordsInSegment;
-  auto rc = m_spAnalytics->eGetNextSegment(llSegmentId, sText, vecWordsInSegment);
+  auto rc = m_spAnalytics->eGetNextSegment(vecWordsInSegment);
   if (rc != Hlib::H_NO_ERROR) {
     Napi::TypeError::New(info.Env(), "Failed to retrieve line or paragraph.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
+  if (vecWordsInSegment.empty()) {
+    Napi::TypeError::New(info.Env(), "Parse vector is empty.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  auto llSegmentId = vecWordsInSegment[0].llSegmentId;
   m_mapWordsInSegment[llSegmentId] = vecWordsInSegment;
   m_mapSegments[llSegmentId] = sText;
   m_mapSegNumToDbId[m_iSegmentCount++] = llSegmentId;
