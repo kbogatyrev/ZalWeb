@@ -219,14 +219,13 @@ function wordParse(response) {
     response.end();
 }
 
-function Word(incompleteParse, lineBreak, segmentId, seqNum, wordSource, stressPositions, gramHashes) {
+function Word(incompleteParse, lineBreak, segmentId, seqNum, wordSource, gramHash) {
     this.incompleteParse = incompleteParse;
     this.lineBreak = lineBreak;
     this.segmentId = segmentId;
     this.seqNum = seqNum;
     this.wordSource = wordSource;
-    this.stressPositions = stressPositions;
-    this.gramHashes = gramHashes;
+    this.gramHashes = gramHash;
 }
 
 function formatSegment(segNum, segObj, text) {
@@ -236,27 +235,27 @@ function formatSegment(segNum, segObj, text) {
                               segObj.getWordInTextProperty(segNum, at, 'segmentId'), 
                               segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
                               segObj.getWordInTextProperty(segNum, at, 'wordSource'), 
-                              segObj.getWordInTextProperty(segNum, at, 'stressPositions'), 
-                              segObj.getWordInTextProperty(segNum, at, 'gramHashes'));
+                              segObj.getWordInTextProperty(segNum, at, 'gramHash'));
         text.push(word);
     }
 }
 
 // arguments: (1) 1st segment id, (2) num of segments to show
 // e.g., HTTP GET /text&startIdx=0&size=2
-function textQuery(start_idx, size, response) {
+function textQuery(start_id, size, response) {
     let text = [];
-    var rc = obj.loadFirstSegment(start_idx);
+    console.log("----- First segment");
+    var rc = obj.loadFirstSegment(start_id);
     formatSegment(0, obj, text);
 //    console.log(text);
 
-    for (let segIdx = 1; segIdx < size; ++segIdx) {
-console.log('------------------------- '+segIdx)        ;
+    for (let segNum = 1; segNum < size; ++segNum) {
+        console.log("----- Next segment: " + segNum);
         bRet = obj.loadNextSegment();
         if (!bRet) {
             break;
         }
-        formatSegment(segIdx, obj, text)
+        formatSegment(segNum, obj, text)
     }
 
     response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });

@@ -493,32 +493,9 @@ fnHandlerWordInText fnWordSource = [](const Napi::CallbackInfo& info, Hlib::StWo
   return Napi::String::New(info.Env(), stWord.sWord.stl_sToUtf8());
 };
 
-fnHandlerWordInText fnStressPositions = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
+fnHandlerWordInText fnGramHash = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
 {
-    if (stWord.vecStressPositions.size() > 0) {
-      Napi::Int32Array arrPositions = Napi::Int32Array::New(info.Env(), stWord.vecStressPositions.size());
-      for (int iAt = 0; iAt < stWord.vecStressPositions.size(); ++iAt)
-      {
-        arrPositions[(size_t)iAt] = stWord.vecStressPositions[iAt];
-      }
-      return arrPositions;
-    } else {
-      return Napi::Boolean::New(info.Env(), false);
-    }
-};
-
-fnHandlerWordInText fnGramHashes = [](const Napi::CallbackInfo& info, Hlib::StWordContext stWord) -> Napi::Value
-{
-    if (stWord.vecGramHashes.size() > 0) {
-      Napi::Array arrGramHashes = Napi::Array::New(info.Env(), stWord.vecGramHashes.size());
-      for (int iAt = 0; iAt < stWord.vecGramHashes.size(); ++iAt)
-      {
-        arrGramHashes[(size_t)iAt] = Hlib::CEString::stl_sToUtf8(stWord.vecGramHashes[iAt]);
-      }
-      return arrGramHashes;
-    } else {
-      return Napi::Boolean::New(info.Env(), false);
-    }
+  return Napi::String::New(info.Env(), stWord.sGramHash.stl_sToUtf8());
 };
 
 // -------------------------------------------------------------------------------------------
@@ -616,8 +593,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToWordInTextHandler["segmentId"] = fnSegmentId;
   m_mapKeyToWordInTextHandler["seqNum"] = fnSeqNum;
   m_mapKeyToWordInTextHandler["wordSource"] = fnWordSource;
-  m_mapKeyToWordInTextHandler["stressPositions"] = fnStressPositions;
-  m_mapKeyToWordInTextHandler["gramHashes"] = fnGramHashes;
+  m_mapKeyToWordInTextHandler["gramHash"] = fnGramHash;
 }
 
 void ZalWeb::SetDbPath(const Napi::CallbackInfo& info) 
@@ -942,7 +918,7 @@ Napi::Value ZalWeb::GetWordInTextProperty(const Napi::CallbackInfo& info)
   }
 
   auto uiSegment = info[0].As<Napi::Number>().Uint32Value();
-  if (uiSegment > m_mapSegments.size() || uiSegment > m_mapSegNumToDbId.size())
+  if (uiSegment > m_mapSegNumToDbId.size())
   {
     ERROR_LOG(L"Segment index out of bounds.")
     return Napi::Boolean::New(info.Env(), false);
@@ -980,6 +956,11 @@ Napi::Value ZalWeb::GetWordInTextProperty(const Napi::CallbackInfo& info)
 
 Napi::Value ZalWeb::LoadFirstSegment(const Napi::CallbackInfo& info)
 {
+  m_mapWordsInSegment.clear();
+  m_mapSegments.clear();
+  m_mapSegNumToDbId.clear();
+  m_iSegmentCount = 0;
+
   if (!m_spDictionary) {
     Napi::TypeError::New(info.Env(), "Dictionary is not initialized.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
@@ -1069,7 +1050,7 @@ Napi::Value ZalWeb::SegmentSize(const Napi::CallbackInfo& info)
   }
 
   auto uiSegment = info[0].As<Napi::Number>().Uint32Value();
-  if (uiSegment >= m_mapSegments.size() || uiSegment >= m_mapWordsInSegment.size() )
+  if (uiSegment >= m_mapSegNumToDbId.size() )
   {
     ERROR_LOG(L"Segment index out of bounds.")
     return Napi::Boolean::New(info.Env(), false);
