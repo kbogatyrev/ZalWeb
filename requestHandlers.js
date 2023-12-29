@@ -58,76 +58,76 @@ function wordQuery(searchString, response) {
             response.end();
             return;
         }
-    }
-    catch (exc) {
-        console.error("NodeJS exception: %s", exc.message);
-    }
 
-    do {
-        var bLexemeLoaded = obj.loadFirstLexeme();
-        if (!bLexemeLoaded) {
-            console.error("loadFirstLexeme() failed");
-            response.write("Internal error");
-            response.end();
-            return;
-        }
+        do {
+            var bLexemeLoaded = obj.loadFirstLexeme();
+            if (!bLexemeLoaded) {
+                console.error("loadFirstLexeme() failed");
+                response.write("Internal error");
+                response.end();
+                return;
+            }
 
-        lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
-        lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
-        lexeme.homonyms = obj.getLexemeProperty("homonyms");
-        lexeme.contexts = obj.getLexemeProperty("contexts");
-        lexeme.spryazhSm = obj.getLexemeProperty("spryazhSm");
-        lexeme.mainSymbol = obj.getLexemeProperty("mainSymbol");
-        lexeme.inflectionSymbol = obj.getLexemeProperty("inflectionSymbol");
-        lexeme.comment = obj.getLexemeProperty("comment");
-        lexeme.headwordComment = obj.getLexemeProperty("headwordComment");
-        lexeme.isPluralOf = obj.getLexemeProperty("isPluralOf");
-        lexeme.pluralOf = obj.getLexemeProperty("pluralOf");
-        lexeme.usage = obj.getLexemeProperty("usage");
-        lexeme.seeRef = obj.getLexemeProperty("seeRef");
-        lexeme.trailingComment = obj.getLexemeProperty("trailingComment");
-        lexeme.restrictedContexts = obj.getLexemeProperty("restrictedContexts");
-        lexeme.section = obj.getLexemeProperty("section");
-        lexeme.hasYoAlternation = obj.getLexemeProperty("hasYoAlternation");
-        lexeme.noComparative = obj.getLexemeProperty("noComparative");
-        lexeme.assumedForms = obj.getLexemeProperty("assumedForms");
-        lexeme.hasIrregularForms = obj.getLexemeProperty("hasIrregularForms");
-        lexeme.hasIrregularVariants = obj.getLexemeProperty("hasIrregularVariants");
-        lexeme.noLongForms = obj.getLexemeProperty("noLongForms");
-        lexeme.difficultForms = obj.getLexemeProperty("difficultForms");
-        lexeme.secondPart = obj.getLexemeProperty("secondPart");
+            lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
+            lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
+            lexeme.homonyms = obj.getLexemeProperty("homonyms");
+            lexeme.contexts = obj.getLexemeProperty("contexts");
+            lexeme.spryazhSm = obj.getLexemeProperty("spryazhSm");
+            lexeme.mainSymbol = obj.getLexemeProperty("mainSymbol");
+            lexeme.inflectionSymbol = obj.getLexemeProperty("inflectionSymbol");
+            lexeme.comment = obj.getLexemeProperty("comment");
+            lexeme.headwordComment = obj.getLexemeProperty("headwordComment");
+            lexeme.isPluralOf = obj.getLexemeProperty("isPluralOf");
+            lexeme.pluralOf = obj.getLexemeProperty("pluralOf");
+            lexeme.usage = obj.getLexemeProperty("usage");
+            lexeme.seeRef = obj.getLexemeProperty("seeRef");
+            lexeme.trailingComment = obj.getLexemeProperty("trailingComment");
+            lexeme.restrictedContexts = obj.getLexemeProperty("restrictedContexts");
+            lexeme.section = obj.getLexemeProperty("section");
+            lexeme.hasYoAlternation = obj.getLexemeProperty("hasYoAlternation");
+            lexeme.noComparative = obj.getLexemeProperty("noComparative");
+            lexeme.assumedForms = obj.getLexemeProperty("assumedForms");
+            lexeme.hasIrregularForms = obj.getLexemeProperty("hasIrregularForms");
+            lexeme.hasIrregularVariants = obj.getLexemeProperty("hasIrregularVariants");
+            lexeme.noLongForms = obj.getLexemeProperty("noLongForms");
+            lexeme.difficultForms = obj.getLexemeProperty("difficultForms");
+            lexeme.secondPart = obj.getLexemeProperty("secondPart");
+            
+            var bInflectionLoaded = obj.loadFirstInflection();
+            if (!bInflectionLoaded) {
+                console.error("loadFirstInflection() failed");
+                response.write("Internal error");
+                response.end();
+                return;
+            }
+
+            inflection.inflectionId = obj.getInflectionProperty("inflectionId");
+            inflection.inflectionType = obj.getInflectionProperty("inflectionType");
+            inflection.accentType1 = obj.getInflectionProperty("accentType1");
+            inflection.accentType2 = obj.getInflectionProperty("accentType2");
+            inflection.aspectPair = obj.getInflectionProperty("aspectPair");
+            inflection.altAspectPair = obj.getInflectionProperty("altAspectPair");
+            inflection.stemAugment = obj.getInflectionProperty("stemAugment");
+            inflection.commonDeviations = obj.getInflectionProperty("commonDeviations");
+            inflection.hasFleetingVowel = obj.getInflectionProperty("hasFleetingVowel");
+            inflection.shortFormsRestricted = obj.getInflectionProperty("shortFormsRestricted");
+            inflection.shortFormsIncomplete = obj.getInflectionProperty("shortFormsIncomplete");
+            inflection.pastParticipleRestricted = obj.getInflectionProperty("pastParticipleRestricted");
+            inflection.noPassivePastParticiple = obj.getInflectionProperty("noPassivePastParticiple");
+
+            lexeme.inflections.push(inflection);
+
+            var json = JSON.stringify(lexeme);
+            console.log(JSON.parse(json));
+            response.write(json);
+
+            import ("uuid");
         
-        var bInflectionLoaded = obj.loadFirstInflection();
-        if (!bInflectionLoaded) {
-            console.error("loadFirstInflection() failed");
-            response.write("Internal error");
-            response.end();
-            return;
-        }
-
-        inflection.inflectionId = obj.getInflectionProperty("inflectionId");
-        inflection.inflectionType = obj.getInflectionProperty("inflectionType");
-        inflection.accentType1 = obj.getInflectionProperty("accentType1");
-        inflection.accentType2 = obj.getInflectionProperty("accentType2");
-        inflection.aspectPair = obj.getInflectionProperty("aspectPair");
-        inflection.altAspectPair = obj.getInflectionProperty("altAspectPair");
-        inflection.stemAugment = obj.getInflectionProperty("stemAugment");
-        inflection.commonDeviations = obj.getInflectionProperty("commonDeviations");
-        inflection.hasFleetingVowel = obj.getInflectionProperty("hasFleetingVowel");
-        inflection.shortFormsRestricted = obj.getInflectionProperty("shortFormsRestricted");
-        inflection.shortFormsIncomplete = obj.getInflectionProperty("shortFormsIncomplete");
-        inflection.pastParticipleRestricted = obj.getInflectionProperty("pastParticipleRestricted");
-        inflection.noPassivePastParticiple = obj.getInflectionProperty("noPassivePastParticiple");
-
-        lexeme.inflections.push(inflection);
-
-        var json = JSON.stringify(lexeme);
-        console.log(JSON.parse(json));
-        response.write(json);
-
-        import ("uuid");
-    
-    } while (obj.loadNextLexeme());
+        } while (obj.loadNextLexeme());
+    }
+    catch (e) {
+        console.error("NodeJS exception: %s", e.message);
+    }
    
     response.end();
 
@@ -207,8 +207,8 @@ function paradigmQuery(inflectionId, response) {
         response.write(json);               
         response.end();
     }
-    catch (exc) {
-        console.error("NodeJS exception: %s", exc.message);
+    catch (e) {
+        console.error("NodeJS exception: %s", e.message);
     }
 }   // paradigmQuery()
 
@@ -229,14 +229,19 @@ function Word(incompleteParse, lineBreak, segmentId, seqNum, wordSource, gramHas
 }
 
 function formatSegment(segNum, segObj, text) {
-    for (let at = 0; at < segObj.segmentSize(segNum); ++at) {
-        const word = new Word(segObj.getWordInTextProperty(segNum, at, 'incompleteParse'), 
-                              segObj.getWordInTextProperty(segNum, at, 'lineBreak'), 
-                              segObj.getWordInTextProperty(segNum, at, 'segmentId'), 
-                              segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
-                              segObj.getWordInTextProperty(segNum, at, 'wordSource'), 
-                              segObj.getWordInTextProperty(segNum, at, 'gramHash'));
-        text.push(word);
+    try {
+        for (let at = 0; at < segObj.segmentSize(segNum); ++at) {
+            const word = new Word(segObj.getWordInTextProperty(segNum, at, 'incompleteParse'), 
+                                segObj.getWordInTextProperty(segNum, at, 'lineBreak'), 
+                                segObj.getWordInTextProperty(segNum, at, 'segmentId'), 
+                                segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
+                                segObj.getWordInTextProperty(segNum, at, 'wordSource'), 
+                                segObj.getWordInTextProperty(segNum, at, 'gramHash'));
+            text.push(word);
+        }
+    }
+    catch (e) {
+        console.log("NodeJS exception : " + e.message);
     }
 }
 
@@ -245,17 +250,22 @@ function formatSegment(segNum, segObj, text) {
 function textQuery(start_id, size, response) {
     let text = [];
     console.log("----- First segment");
-    var rc = obj.loadFirstSegment(start_id);
-    formatSegment(0, obj, text);
-//    console.log(text);
 
-    for (let segNum = 1; segNum < size; ++segNum) {
-        console.log("----- Next segment: " + segNum);
-        bRet = obj.loadNextSegment();
-        if (!bRet) {
-            break;
+    try {
+        var rc = obj.loadFirstSegment(start_id);
+        formatSegment(0, obj, text);
+    //    console.log(text);
+
+        for (let segNum = 1; segNum < size; ++segNum) {
+            console.log("----- Next segment: " + segNum);
+            bRet = obj.loadNextSegment();
+            if (!bRet) {
+                break;
+            }
+            formatSegment(segNum, obj, text)
         }
-        formatSegment(segNum, obj, text)
+    } catch (e) {
+        console.log ("NodeJS exception: " + e.message);
     }
 
     response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
