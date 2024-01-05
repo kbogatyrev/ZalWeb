@@ -6,7 +6,7 @@ Build the NodeJS server using Visual Studio 2022 (C++ core) and Visual Studio Co
 -- Select "WSL:Ubuntu-..." connection as the target system and "Linux Debug" or "Linux Release" as the current configuration
 -- Build the Linux Binary
 
-2. Build the Node C++ add-on (Visual Studio Code)
+3. Build the Node C++ add-on (Visual Studio Code)
 -- Open an WSL Ubuntu connection
 -- Clone the Zal-Web repo from the GitHub: https://github.com/kbogatyrev/Zal-Web targeting a WSL Linux directory
 -- Use VSC to open the Zal-Web directory as a CMake project or --
