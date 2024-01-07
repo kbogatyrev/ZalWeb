@@ -249,15 +249,12 @@ function formatSegment(segNum, segObj, text) {
 // e.g., HTTP GET /text&startIdx=0&size=2
 function textQuery(start_id, size, response) {
     let text = [];
-    console.log("----- First segment");
-
     try {
         var rc = obj.loadFirstSegment(start_id);
         formatSegment(0, obj, text);
     //    console.log(text);
 
         for (let segNum = 1; segNum < size; ++segNum) {
-            console.log("----- Next segment: " + segNum);
             bRet = obj.loadNextSegment();
             if (!bRet) {
                 break;
