@@ -12,4 +12,4 @@ Build the NodeJS server using Visual Studio 2022 (C++ core) and Visual Studio Co
 -- Use VSC to open the Zal-Web directory as a CMake project or --   
 -- Open a WSL Ubuntu window and cd to Zal-Web   
 -- Say **cmake-js** to build the NodeJS server   
--- Start the server by enetring node **index.js**   
+-- Start the server by entering node **index.js**   
