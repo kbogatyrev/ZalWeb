@@ -66,8 +66,8 @@ function wordQuery(searchString, response) {
             response.end();
             return;
         }
-
-        while (obj.loadNextLexeme()) {
+        
+        do {
             lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
             lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
             lexeme.homonyms = obj.getLexemeProperty("homonyms");
@@ -122,7 +122,8 @@ function wordQuery(searchString, response) {
             response.write(json);
 
             import ("uuid");
-        }
+
+        } while (obj.loadNextLexeme());
     }
     catch (e) {
         console.error("NodeJS exception: %s", e.message);
