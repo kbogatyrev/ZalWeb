@@ -59,15 +59,15 @@ function wordQuery(searchString, response) {
             return;
         }
 
-        do {
-            var bLexemeLoaded = obj.loadFirstLexeme();
-            if (!bLexemeLoaded) {
-                console.error("loadFirstLexeme() failed");
-                response.write("Internal error");
-                response.end();
-                return;
-            }
+        var bLexemeLoaded = obj.loadFirstLexeme();
+        if (!bLexemeLoaded) {
+            console.error("loadFirstLexeme() failed");
+            response.write("Internal error");
+            response.end();
+            return;
+        }
 
+        while (obj.loadNextLexeme()) {
             lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
             lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
             lexeme.homonyms = obj.getLexemeProperty("homonyms");
@@ -122,8 +122,7 @@ function wordQuery(searchString, response) {
             response.write(json);
 
             import ("uuid");
-        
-        } while (obj.loadNextLexeme());
+        }
     }
     catch (e) {
         console.error("NodeJS exception: %s", e.message);
