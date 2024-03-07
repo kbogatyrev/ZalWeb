@@ -6,9 +6,9 @@ const http = require("https");
 const fs = require("fs");
 
 const httpsOptions = {
-    cert: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org"),
-    ca: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org"),
-    key: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org")
+    cert: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org/cert.pem"),
+    ca: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org/fullchain.pem"),
+    key: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org/privkey.pem")
 };
 
 const url = require("url");
