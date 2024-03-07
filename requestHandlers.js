@@ -2,50 +2,57 @@ function wordQuery(searchString, response) {
 
     obj.clear();
 
-
-    var lexeme = {
-        lexemeId : '',
-        sourceForm : '',
-        homonyms : [],
-        contexts : [],
-        spryazhSm : false,
-        mainSymbol : '',
-        inflectionSymbol : '',
-        comment : '',
-        headwordComment : '',
-        isPluralOf : false,
-        pluralOf : '',
-        usage : '',
-        seeRef : '',
-        trailingComment : '',
-        restrictedContexts : '',
-        section : -1,
-        fleetingVowel : false,
-        hasYoAlternation : false,
-        noComparative : false,
-        assumedForms : false,
-        hasIrregularForms : false,
-        hasIrregularVariants : false,
-        noLongForms : false,
-        difficultForms : false,
-        secondPart : false,
-        inflections: []
+    var lexData = {
+        lexemes:[]
     };
 
-    var inflection = {
-        inflectionId : '',
-        inflectionType : -1,
-        accentType1 : '',
-        accentType2 : '',
-        shorFormsRestricted : false,
-        shorFormsIncomplete : false,
-        commonDeviations : [],
-        aspectPair : '',
-        altAspectPair : '',
-        stemAugment : -1,
-        hasFleetingVowel : false,
-        pastParticipleRestricted : false,
-        noPastParticiple : false
+    class Lexeme {
+        constructor() {
+            this.lexemeId = '',
+            this.sourceForm = '',
+            this.homonyms = [],
+            this.contexts = [],
+            this.spryazhSm = false,
+            this.mainSymbol = '',
+            this.inflectionSymbol = '',
+            this.comment = '',
+            this.headwordComment = '',
+            this.isPluralOf = false,
+            this.pluralOf = '',
+            this.usage = '',
+            this.seeRef = '',
+            this.trailingComment = '',
+            this.restrictedContexts = '',
+            this.section = -1,
+            this.fleetingVowel = false,
+            this.hasYoAlternation = false,
+            this.noComparative = false,
+            this.assumedForms = false,
+            this.hasIrregularForms = false,
+            this.hasIrregularVariants = false,
+            this.noLongForms = false,
+            this.difficultForms = false,
+            this.secondPart = false,
+            this.inflections = []
+        }
+    };
+
+    class Inflection {
+        constructor() {
+            this.inflectionId = '',
+            this.inflectionType = -1,
+            this.accentType1 = '',
+            this.accentType2 = '',
+            this.shorFormsRestricted = false,
+            this.shorFormsIncomplete = false,
+            this.commonDeviations = [],
+            this.aspectPair = '',
+            this.altAspectPair = '',
+            this.stemAugment = -1,
+            this.hasFleetingVowel = false,
+            this.pastParticipleRestricted = false,
+            this.noPastParticiple = false
+        }
     };
 
     response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
@@ -68,6 +75,7 @@ function wordQuery(searchString, response) {
         }
         
         do {
+            lexeme = new Lexeme();
             lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
             lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
             lexeme.homonyms = obj.getLexemeProperty("homonyms");
@@ -101,6 +109,7 @@ function wordQuery(searchString, response) {
                 return;
             }
 
+            inflection = new Inflection();
             inflection.inflectionId = obj.getInflectionProperty("inflectionId");
             inflection.inflectionType = obj.getInflectionProperty("inflectionType");
             inflection.accentType1 = obj.getInflectionProperty("accentType1");
@@ -117,9 +126,7 @@ function wordQuery(searchString, response) {
 
             lexeme.inflections.push(inflection);
 
-            var json = JSON.stringify(lexeme);
-            console.log(JSON.parse(json));
-            response.write(json);
+            lexData.lexemes.push(lexeme);
 
             import ("uuid");
 
@@ -128,6 +135,10 @@ function wordQuery(searchString, response) {
     catch (e) {
         console.error("NodeJS exception: %s", e.message);
     }
+
+    var json = JSON.stringify(lexData.lexemes);
+    console.log(JSON.parse(json));
+    response.write(json);
    
     response.end();
 
