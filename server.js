@@ -1,9 +1,18 @@
 const { URL } = require('url');
 
 Object.defineProperty(exports, "__esModule", { value: true });
-const http = require("http");
+
+const http = require("https");
+const fs = require("fs");
+
+const httpsOptions = {
+    cert: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org"),
+    ca: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org"),
+    key: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org")
+};
+
 const url = require("url");
-//const port = process.env.port || 1337
+
 function start(route, handle) {
     function onRequest(request, response) {
         const fullUrl = request.protocol + '://' + request.headers.host + request.url;
@@ -16,4 +25,3 @@ function start(route, handle) {
     console.log('Server has started.');
 }
 exports.start = start;
-//# sourceMappingURL=server.js.map
