@@ -19,9 +19,12 @@ function start(route, handle) {
         console.log(fullUrl);
         const parsedUrl = new URL(fullUrl);
         console.log(parsedUrl);
+  	response.setHeader("Access-Control-Allow-Origin", "https://polivanov.dev");
+  	response.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT");
+  	response.setHeader("Access-Control-Allow-Headers", "Content-Type");
         route(handle, parsedUrl.pathname, parsedUrl.searchParams, response);
     }
-    http.createServer(onRequest).listen(8088);
+    http.createServer(httpsOptions, onRequest).listen(8088);
     console.log('Server has started.');
 }
 exports.start = start;
