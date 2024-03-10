@@ -109,22 +109,24 @@ function wordQuery(searchString, response) {
                 return;
             }
 
-            inflection = new Inflection();
-            inflection.inflectionId = obj.getInflectionProperty("inflectionId");
-            inflection.inflectionType = obj.getInflectionProperty("inflectionType");
-            inflection.accentType1 = obj.getInflectionProperty("accentType1");
-            inflection.accentType2 = obj.getInflectionProperty("accentType2");
-            inflection.aspectPair = obj.getInflectionProperty("aspectPair");
-            inflection.altAspectPair = obj.getInflectionProperty("altAspectPair");
-            inflection.stemAugment = obj.getInflectionProperty("stemAugment");
-            inflection.commonDeviations = obj.getInflectionProperty("commonDeviations");
-            inflection.hasFleetingVowel = obj.getInflectionProperty("hasFleetingVowel");
-            inflection.shortFormsRestricted = obj.getInflectionProperty("shortFormsRestricted");
-            inflection.shortFormsIncomplete = obj.getInflectionProperty("shortFormsIncomplete");
-            inflection.pastParticipleRestricted = obj.getInflectionProperty("pastParticipleRestricted");
-            inflection.noPassivePastParticiple = obj.getInflectionProperty("noPassivePastParticiple");
+            do {
+                inflection = new Inflection();
+                inflection.inflectionId = obj.getInflectionProperty("inflectionId");
+                inflection.inflectionType = obj.getInflectionProperty("inflectionType");
+                inflection.accentType1 = obj.getInflectionProperty("accentType1");
+                inflection.accentType2 = obj.getInflectionProperty("accentType2");
+                inflection.aspectPair = obj.getInflectionProperty("aspectPair");
+                inflection.altAspectPair = obj.getInflectionProperty("altAspectPair");
+                inflection.stemAugment = obj.getInflectionProperty("stemAugment");
+                inflection.commonDeviations = obj.getInflectionProperty("commonDeviations");
+                inflection.hasFleetingVowel = obj.getInflectionProperty("hasFleetingVowel");
+                inflection.shortFormsRestricted = obj.getInflectionProperty("shortFormsRestricted");
+                inflection.shortFormsIncomplete = obj.getInflectionProperty("shortFormsIncomplete");
+                inflection.pastParticipleRestricted = obj.getInflectionProperty("pastParticipleRestricted");
+                inflection.noPassivePastParticiple = obj.getInflectionProperty("noPassivePastParticiple");
+                lexeme.inflections.push(inflection);
 
-            lexeme.inflections.push(inflection);
+            } while(obj.loadNextInflection());
 
             lexData.lexemes.push(lexeme);
 
