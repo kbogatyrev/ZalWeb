@@ -67,6 +67,21 @@ fnHandlerLexeme fnSourceForm = [](const Napi::CallbackInfo& info, shared_ptr<Hli
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sSource));
 };
 
+// sHeadwordComment
+
+fnHandlerLexeme fnHeadwordVariant = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+  auto& stProps = spLexeme->stGetProperties();
+  if (stProps.sHeadwordVariant.uiLength() > 0) {
+    Napi::String sHeadwordVariant = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordVariant));
+    return sHeadwordVariant;
+  } else {
+    return Napi::Boolean::New(info.Env(), false);
+  }
+};
+
+// sHeadwordVariantComment
+
 fnHandlerLexeme fnHomonyms = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 { 
   auto& stProps = spLexeme->stGetProperties();
@@ -84,6 +99,60 @@ fnHandlerLexeme fnHomonyms = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   }
 };
 
+fnHandlerLexeme fnMainSymbol = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+  auto& stProps = spLexeme->stGetProperties();
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sMainSymbol));
+};
+
+fnHandlerLexeme fnPartOfSpeechLexeme = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value
+{
+  auto ePos = spLexeme-> ePartOfSpeech();
+  auto itPosString = MapPosToString.find(ePos);
+  if (itPosString == MapPosToString.end()) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve source part of speech value.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), itPosString->second);
+};
+
+fnHandlerLexeme fnIsTransitive = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+  auto& stProps = spLexeme->stGetProperties();
+  return Napi::Boolean::New(info.Env(), stProps.bTransitive);
+};
+
+fnHandlerLexeme fnInflectionSymbol = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+  auto& stProps = spLexeme->stGetProperties();
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sInflectionType));
+};
+
+fnHandlerLexeme fnIsPluralOf = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+  return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bIsPluralOf);
+};
+
+fnHandlerLexeme fnPluralOf = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sPluralOf));
+};
+
+fnHandlerLexeme fnSection = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+    return Napi::Number::New(info.Env(), spLexeme->stGetProperties().iSection);
+};
+fnHandlerLexeme fnSpryazhSm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bSpryazhSm);
+};
+
+fnHandlerLexeme fnSpryazhSmRef = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
+{
+    auto& stProps = spLexeme->stGetProperties();
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sSpryazhSmRefSource));
+};
+
 fnHandlerLexeme fnContexts = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
   auto& stProps = spLexeme->stGetProperties();
@@ -95,34 +164,6 @@ fnHandlerLexeme fnContexts = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   }
 };
 
-fnHandlerLexeme fnHeadwordVariant = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
-{
-  auto& stProps = spLexeme->stGetProperties();
-  if (stProps.sHeadwordVariant.uiLength() > 0) {
-    Napi::String sHeadwordVariant = Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordVariant));
-    return sHeadwordVariant;
-  } else {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-};
-
-fnHandlerLexeme fnSpryazhSm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
-{
-    return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bSpryazhSm);
-};
-
-fnHandlerLexeme fnMainSymbol = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
-{
-  auto& stProps = spLexeme->stGetProperties();
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sMainSymbol));
-};
-
-fnHandlerLexeme fnInflectionSymbol = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
-{
-  auto& stProps = spLexeme->stGetProperties();
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sInflectionType));
-};
-
 fnHandlerLexeme fnComment = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sComment));
@@ -132,16 +173,6 @@ fnHandlerLexeme fnHeadwordComment = [](const Napi::CallbackInfo& info, shared_pt
 {
   auto& stProps = spLexeme->stGetProperties();
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(stProps.sHeadwordComment));
-};
-
-fnHandlerLexeme fnIsPluralOf = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
-{
-  return Napi::Boolean::New(info.Env(), spLexeme->stGetProperties().bIsPluralOf);
-};
-
-fnHandlerLexeme fnPluralOf = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
-{
-  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sPluralOf));
 };
 
 fnHandlerLexeme fnUsage = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
@@ -162,11 +193,6 @@ fnHandlerLexeme fnTrailingCommentLexeme = [](const Napi::CallbackInfo& info, sha
 fnHandlerLexeme fnRestrictedContexts = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
 {
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spLexeme->stGetProperties().sRestrictedContexts));
-};
-
-fnHandlerLexeme fnSection = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme> spLexeme) -> Napi::Value 
-{
-    return Napi::Number::New(info.Env(), spLexeme->stGetProperties().iSection);
 };
 
 fnHandlerLexeme fnHasYoAlternation = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CLexeme>  spLexeme) -> Napi::Value 
@@ -248,7 +274,8 @@ fnHandlerInflection fnAspectPair = [](const Napi::CallbackInfo& info, shared_ptr
   Hlib::CEString sAspectPair;
   int iStressPos = -1;
   auto rc = spInflection->eGetAspectPair(sAspectPair, iStressPos);
-  if (Hlib::H_NO_ERROR == rc) {
+  if (Hlib::H_NO_ERROR == rc && sAspectPair.uiLength() > 0) {
+    sAspectPair.sInsert(iStressPos, Hlib::CEString::g_chrCombiningAcuteAccent);
     return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sAspectPair));
   } else {
     return Napi::Boolean::New(info.Env(), false);    
@@ -519,7 +546,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
       Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.").ThrowAsJavaScriptException();
   }
 
-  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master_Tsvetaeva.db3";
+  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master.db3";
     auto ret = m_spDictionary->eSetDbPath(sDbPath);
 
 
@@ -535,7 +562,10 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToLexemePropHandler["contexts"] = fnContexts;
   m_mapKeyToLexemePropHandler["headwordVariant"] = fnHeadwordVariant;
   m_mapKeyToLexemePropHandler["spryazhSm"] = fnSpryazhSm;
+  m_mapKeyToLexemePropHandler["spryazhSmRef"] = fnSpryazhSmRef;
   m_mapKeyToLexemePropHandler["mainSymbol"] = fnMainSymbol;
+  m_mapKeyToLexemePropHandler["partOfSpeech"] = fnPartOfSpeechLexeme;
+  m_mapKeyToLexemePropHandler["isTransitive"] = fnIsTransitive;
   m_mapKeyToLexemePropHandler["inflectionSymbol"] = fnInflectionSymbol;
   m_mapKeyToLexemePropHandler["comment"] = fnComment;
   m_mapKeyToLexemePropHandler["headwordComment"] = fnHeadwordComment;

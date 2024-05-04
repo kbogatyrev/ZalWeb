@@ -6,54 +6,8 @@ function wordQuery(searchString, response) {
         lexemes:[]
     };
 
-    class Lexeme {
-        constructor() {
-            this.lexemeId = '',
-            this.sourceForm = '',
-            this.homonyms = [],
-            this.contexts = [],
-            this.spryazhSm = false,
-            this.mainSymbol = '',
-            this.inflectionSymbol = '',
-            this.comment = '',
-            this.headwordComment = '',
-            this.isPluralOf = false,
-            this.pluralOf = '',
-            this.usage = '',
-            this.seeRef = '',
-            this.trailingComment = '',
-            this.restrictedContexts = '',
-            this.section = -1,
-            this.fleetingVowel = false,
-            this.hasYoAlternation = false,
-            this.noComparative = false,
-            this.assumedForms = false,
-            this.hasIrregularForms = false,
-            this.hasIrregularVariants = false,
-            this.noLongForms = false,
-            this.difficultForms = false,
-            this.secondPart = false,
-            this.inflections = []
-        }
-    };
-
-    class Inflection {
-        constructor() {
-            this.inflectionId = '',
-            this.inflectionType = -1,
-            this.accentType1 = '',
-            this.accentType2 = '',
-            this.shorFormsRestricted = false,
-            this.shorFormsIncomplete = false,
-            this.commonDeviations = [],
-            this.aspectPair = '',
-            this.altAspectPair = '',
-            this.stemAugment = -1,
-            this.hasFleetingVowel = false,
-            this.pastParticipleRestricted = false,
-            this.noPastParticiple = false
-        }
-    };
+    class Lexeme {};
+    class Inflection {};
 
     response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
 
@@ -78,28 +32,20 @@ function wordQuery(searchString, response) {
             lexeme = new Lexeme();
             lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
             lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
-            lexeme.homonyms = obj.getLexemeProperty("homonyms");
-            lexeme.contexts = obj.getLexemeProperty("contexts");
-            lexeme.spryazhSm = obj.getLexemeProperty("spryazhSm");
             lexeme.mainSymbol = obj.getLexemeProperty("mainSymbol");
-            lexeme.inflectionSymbol = obj.getLexemeProperty("inflectionSymbol");
-            lexeme.comment = obj.getLexemeProperty("comment");
-            lexeme.headwordComment = obj.getLexemeProperty("headwordComment");
-            lexeme.isPluralOf = obj.getLexemeProperty("isPluralOf");
-            lexeme.pluralOf = obj.getLexemeProperty("pluralOf");
-            lexeme.usage = obj.getLexemeProperty("usage");
-            lexeme.seeRef = obj.getLexemeProperty("seeRef");
-            lexeme.trailingComment = obj.getLexemeProperty("trailingComment");
-            lexeme.restrictedContexts = obj.getLexemeProperty("restrictedContexts");
-            lexeme.section = obj.getLexemeProperty("section");
-            lexeme.hasYoAlternation = obj.getLexemeProperty("hasYoAlternation");
-            lexeme.noComparative = obj.getLexemeProperty("noComparative");
-            lexeme.assumedForms = obj.getLexemeProperty("assumedForms");
-            lexeme.hasIrregularForms = obj.getLexemeProperty("hasIrregularForms");
-            lexeme.hasIrregularVariants = obj.getLexemeProperty("hasIrregularVariants");
-            lexeme.noLongForms = obj.getLexemeProperty("noLongForms");
-            lexeme.difficultForms = obj.getLexemeProperty("difficultForms");
-            lexeme.secondPart = obj.getLexemeProperty("secondPart");
+            lexeme.partOfSpeech = obj.getLexemeProperty("partOfSpeech");
+            if ("Verb" == lexeme.partOfSpeech) {
+                lexeme.isTransitive = obj.getLexemeProperty("isTransitive");
+            }
+            spryazhSm = obj.getLexemeProperty("spryazhSm");
+            if (spryazhSm) {
+                lexeme.spryazhSmRef = obj.getLexemeProperty("spryazhSmRef");
+            }
+
+            section = obj.getLexemeProperty("section");
+            if (section >= 1) {
+                lexeme.section = obj.getLexemeProperty("section");
+            }
             
             var bInflectionLoaded = obj.loadFirstInflection();
             if (!bInflectionLoaded) {
@@ -109,21 +55,28 @@ function wordQuery(searchString, response) {
                 return;
             }
 
+            var inflectionId = obj.getInflectionProperty("inflectionId");
+            var bGenerated = obj.generateParadigm(inflectionId);
+            if (!bGenerated) {
+                console.error("Failed to generate paradigm for inflection ID %s.", inflectionId);
+                response.write("Failed to generate paradigm.");
+                response.end();
+                return;
+            }
+    
+            lexeme.inflections = [];
             do {
                 inflection = new Inflection();
                 inflection.inflectionId = obj.getInflectionProperty("inflectionId");
                 inflection.inflectionType = obj.getInflectionProperty("inflectionType");
                 inflection.accentType1 = obj.getInflectionProperty("accentType1");
                 inflection.accentType2 = obj.getInflectionProperty("accentType2");
-                inflection.aspectPair = obj.getInflectionProperty("aspectPair");
-                inflection.altAspectPair = obj.getInflectionProperty("altAspectPair");
-                inflection.stemAugment = obj.getInflectionProperty("stemAugment");
-                inflection.commonDeviations = obj.getInflectionProperty("commonDeviations");
-                inflection.hasFleetingVowel = obj.getInflectionProperty("hasFleetingVowel");
-                inflection.shortFormsRestricted = obj.getInflectionProperty("shortFormsRestricted");
-                inflection.shortFormsIncomplete = obj.getInflectionProperty("shortFormsIncomplete");
-                inflection.pastParticipleRestricted = obj.getInflectionProperty("pastParticipleRestricted");
-                inflection.noPassivePastParticiple = obj.getInflectionProperty("noPassivePastParticiple");
+                if ("Verb" == lexeme.partOfSpeech) {
+                    aspectPair = obj.getInflectionProperty("aspectPair");
+                    if (aspectPair.length > 0) {
+                        inflection.aspectPair = aspectPair;
+                    }
+                }
                 lexeme.inflections.push(inflection);
 
             } while(obj.loadNextInflection());
