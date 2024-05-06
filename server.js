@@ -6,9 +6,11 @@ const fs = require('fs');
 Object.defineProperty(exports, "__esModule", { value: true });
 var server = undefined;
 var allow_origin = undefined;
+var httpsOptions = undefined;
+var protocol = undefined;
 
 function init(config) {
-    const protocol = config.settings.protocol;
+    protocol = config.settings.protocol;
     if (undefined == protocol || ("http" != protocol && "https" != protocol)) {
         console.log('*** WARNING: unable to read protocol, assuming HTTP.');
         server = require("http");
@@ -21,12 +23,12 @@ function init(config) {
         const ca_path = config.certificates.ca_path;
         const private_key_path = config.certificates.private_key_path;
 
-        if (undefined = cert_path || undefined == ca_path || undefined == private_key_path) {
-            console.log('*** WARNING: unable to read certs, exiting.');
+        if (cert_path == undefined || ca_path == undefined || private_key_path == undefined) {
+            console.log('*** ERROR: unable to read certs, exiting.');
             process.exit(2);
         }
-        const httpsOptions = {
-            cert: fs.readFileSync(caert_path),
+        httpsOptions = {
+            cert: fs.readFileSync(cert_path),
             ca: fs.readFileSync(ca_path),
             key: fs.readFileSync(private_key_path)
         };
@@ -50,7 +52,11 @@ function start(route, handle) {
         }
         route(handle, parsedUrl.pathname, parsedUrl.searchParams, response);
     }
-    server.createServer(onRequest).listen(8088);
+    if (protocol == "https") {
+        server.createServer(httpsOptions, onRequest).listen(8088);
+    } else {
+        server.createServer(onRequest).listen(8088);
+    }
     console.log('Server has started.');
 }
 

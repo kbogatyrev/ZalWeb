@@ -83,7 +83,7 @@ function wordQuery(searchString, response) {
 
             lexData.lexemes.push(lexeme);
 
-            import ("uuid");
+//            import ("uuid");
 
         } while (obj.loadNextLexeme());
     }
