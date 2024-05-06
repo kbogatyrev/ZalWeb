@@ -1,17 +1,41 @@
-const { URL } = require('url');
+//const { URL } = require('url');
+const url = require("url");
+const fs = require('fs');
+
 
 Object.defineProperty(exports, "__esModule", { value: true });
+var server = undefined;
+var allow_origin = undefined;
 
-const http = require("https");
-const fs = require("fs");
+function init(config) {
+    const protocol = config.settings.protocol;
+    if (undefined == protocol || ("http" != protocol && "https" != protocol)) {
+        console.log('*** WARNING: unable to read protocol, assuming HTTP.');
+        server = require("http");
+    } else {
+        server = require(protocol);
+    }
 
-const httpsOptions = {
-    cert: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org/cert.pem"),
-    ca: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org/fullchain.pem"),
-    key: fs.readFileSync("/etc/letsencrypt/live/bogatyrev.org/privkey.pem")
-};
+    if ("https" == protocol) {
+        const cert_path = config.certificates.cert_path;
+        const ca_path = config.certificates.ca_path;
+        const private_key_path = config.certificates.private_key_path;
 
-const url = require("url");
+        if (undefined = cert_path || undefined == ca_path || undefined == private_key_path) {
+            console.log('*** WARNING: unable to read certs, exiting.');
+            process.exit(2);
+        }
+        const httpsOptions = {
+            cert: fs.readFileSync(caert_path),
+            ca: fs.readFileSync(ca_path),
+            key: fs.readFileSync(private_key_path)
+        };
+
+        if (config.misc.allow_origin != undefined) {
+            allow_origin = config.misc.allow_origin;
+        }
+    }
+}       //  init()
 
 function start(route, handle) {
     function onRequest(request, response) {
@@ -19,12 +43,16 @@ function start(route, handle) {
         console.log(fullUrl);
         const parsedUrl = new URL(fullUrl);
         console.log(parsedUrl);
-  	response.setHeader("Access-Control-Allow-Origin", "https://polivanov.dev");
-  	response.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT");
-  	response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+        if (allow_origin != undefined) {
+  	        response.setHeader("Access-Control-Allow-Origin", allow_origin);
+  	        response.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT");
+  	        response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+        }
         route(handle, parsedUrl.pathname, parsedUrl.searchParams, response);
     }
-    http.createServer(httpsOptions, onRequest).listen(8088);
+    server.createServer(onRequest).listen(8088);
     console.log('Server has started.');
 }
+
+exports.init = init;
 exports.start = start;

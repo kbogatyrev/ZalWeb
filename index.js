@@ -1,6 +1,19 @@
-var server = require('./server');
-var router = require('./router');
-var requestHandlers = require("./requestHandlers");
+const toml = require('toml');
+const fs = require('fs');
+
+const requestHandlers = require("./requestHandlers");
+const server = require('./server');
+const router = require('./router');
+
+const settings_path = process.argv[2]
+if (settings_path == undefined) {
+    console.log("*** ERROR: missing config file");
+    process.exit(1);
+}
+
+const config = toml.parse(fs.readFileSync(settings_path, 'utf-8'));
+server.init(config);
+
 var handle = {};
 handle["/query"] = requestHandlers.wordQuery;
 handle["/forms"] = requestHandlers.paradigmQuery;

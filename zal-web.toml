@@ -1,0 +1,18 @@
+#
+# TOML config file for zal web server
+#
+
+title = "Zal web server"
+
+[settings]
+db_path_db = "/home/konstantin/zal/ZalData_demo.db3"
+protocol = "http"
+port = "8088"
+
+[certificates]
+cert_path = "/etc/letsencrypt/live/bogatyrev.org/cert.pem"
+ca_path = "/etc/letsencrypt/live/bogatyrev.org/fullchain.pem"
+private_key_path = "/etc/letsencrypt/live/bogatyrev.org/privkey.pem"
+
+[misc]
+allow_origin = "https://polivanov.dev"
