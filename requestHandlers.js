@@ -69,8 +69,14 @@ function wordQuery(searchString, response) {
                 inflection = new Inflection();
                 inflection.inflectionId = obj.getInflectionProperty("inflectionId");
                 inflection.inflectionType = obj.getInflectionProperty("inflectionType");
-                inflection.accentType1 = obj.getInflectionProperty("accentType1");
-                inflection.accentType2 = obj.getInflectionProperty("accentType2");
+                const ap1 = obj.getInflectionProperty("accentType1");
+                if (ap1 != "") {
+                    inflection.accentType1 = ap1;
+                    const ap2 = obj.getInflectionProperty("accentType2");
+                    if (ap2 != "") {
+                        inflection.accentType2 = ap2;
+                    }
+                }
                 if ("Verb" == lexeme.partOfSpeech) {
                     aspectPair = obj.getInflectionProperty("aspectPair");
                     if (aspectPair.length > 0) {
