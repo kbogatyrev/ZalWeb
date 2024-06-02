@@ -1,5 +1,10 @@
 const toml = require('toml');
 const fs = require('fs');
+var express = require('express');
+var cors = require('cors');
+var app = express();
+
+app.use(cors({ origin: true, credentials: true }));
 
 const requestHandlers = require("./requestHandlers");
 const server = require('./server');

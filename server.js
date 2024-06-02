@@ -32,10 +32,10 @@ function init(config) {
             ca: fs.readFileSync(ca_path),
             key: fs.readFileSync(private_key_path)
         };
+    }
 
-        if (config.misc.allow_origin != undefined) {
-            allow_origin = config.misc.allow_origin;
-        }
+    if (config.misc.allow_origin != undefined) {
+        allow_origin = config.misc.allow_origin;
     }
 }       //  init()
 

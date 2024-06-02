@@ -345,9 +345,16 @@ fnHandlerInflection fnNoPassivePastParticiple = [](const Napi::CallbackInfo& inf
 
 fnHandlerWordForm fnWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
-    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sWordForm()));
+  Hlib::CEString sWordForm;
+  auto rc = spWordForm->eGetFormWithDiacritics(sWordForm);
+  if (rc != Hlib::H_NO_ERROR) {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve word form.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sWordForm));
 };
 
+/*
 fnHandlerWordForm fnStem = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
     return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sStem()));
@@ -357,6 +364,7 @@ fnHandlerWordForm fnEnding = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
 {
     return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sEnding()));
 };
+*/
 
 fnHandlerWordForm fnPartOfSpeech = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
@@ -435,6 +443,7 @@ fnHandlerWordForm fnAnimacy = [](const Napi::CallbackInfo& info, shared_ptr<Hlib
   return Napi::String::New(info.Env(), itAnimacyString->second);
 };
 
+/*
 fnHandlerWordForm fnReflexivity = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
   auto eReflexivity = spWordForm->eReflexive();
@@ -456,6 +465,7 @@ fnHandlerWordForm fnAspect = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   }
   return Napi::String::New(info.Env(), itAspectString->second);
 };
+*/
 
 fnHandlerWordForm fnStatus = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
@@ -483,6 +493,7 @@ fnHandlerWordForm fnIsDifficult = [](const Napi::CallbackInfo& info, shared_ptr<
   return Napi::Boolean::New(info.Env(), spWordForm->bIsDifficult());
 };
 
+/*
 fnHandlerWordForm fnLeadCommentWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sLeadComment()));
@@ -492,6 +503,7 @@ fnHandlerWordForm fnTrailingCommentWordForm = [](const Napi::CallbackInfo& info,
 {
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spWordForm->sTrailingComment()));
 };
+*/
 
 // -------------------------------------------------------------------------------------------
 
@@ -546,7 +558,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
       Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.").ThrowAsJavaScriptException();
   }
 
-  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master.db3";
+  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master_Ts_TEST.db3";
     auto ret = m_spDictionary->eSetDbPath(sDbPath);
 
 
@@ -600,8 +612,8 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToInflectionPropHandler["noPassivePastParticiple"] = fnNoPassivePastParticiple;
 
   m_mapKeyToWordFormPropHandler["wordForm"] = fnWordForm;
-  m_mapKeyToWordFormPropHandler["stem"] = fnStem;
-  m_mapKeyToWordFormPropHandler["ending"] = fnEnding;
+//  m_mapKeyToWordFormPropHandler["stem"] = fnStem;
+//  m_mapKeyToWordFormPropHandler["ending"] = fnEnding;
   m_mapKeyToWordFormPropHandler["partOfSpeech"] = fnPartOfSpeech;
   m_mapKeyToWordFormPropHandler["case"] = fnCase;
   m_mapKeyToWordFormPropHandler["subParadigm"] = fnSubParadigm;
@@ -609,14 +621,14 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToWordFormPropHandler["gender"] = fnGender;
   m_mapKeyToWordFormPropHandler["person"] = fnPerson;
   m_mapKeyToWordFormPropHandler["animacy"] = fnAnimacy;
-  m_mapKeyToWordFormPropHandler["reflexivity"] = fnReflexivity;
-  m_mapKeyToWordFormPropHandler["aspect"] = fnAspect;
+//  m_mapKeyToWordFormPropHandler["reflexivity"] = fnReflexivity;
+//  m_mapKeyToWordFormPropHandler["aspect"] = fnAspect;
   m_mapKeyToWordFormPropHandler["status"] = fnStatus;
   m_mapKeyToWordFormPropHandler["isIrregular"] = fnIsIrregular;
   m_mapKeyToWordFormPropHandler["isVariant"] = fnIsVariant;
   m_mapKeyToWordFormPropHandler["isDifficult"] = fnIsDifficult;
-  m_mapKeyToWordFormPropHandler["leadComment"] = fnLeadCommentWordForm;
-  m_mapKeyToWordFormPropHandler["trailingComment"] = fnTrailingCommentWordForm;
+//  m_mapKeyToWordFormPropHandler["leadComment"] = fnLeadCommentWordForm;
+//  m_mapKeyToWordFormPropHandler["trailingComment"] = fnTrailingCommentWordForm;
 
   m_mapKeyToWordInTextHandler["incompleteParse"] = fnIncompleteParse;
   m_mapKeyToWordInTextHandler["lineBreak"] = fnLineBreak;

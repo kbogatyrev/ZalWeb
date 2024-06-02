@@ -1,3 +1,17 @@
+const Declinables = ['Noun', 'LongAdj', 'Pronoun', 'PronounAdj', 'Numeral', 'NumeralAdj', 
+                     'PartPresAct', 'PartPresPassLong', 'PartPastAct', 'PartPastPassLong', 
+                     'PartPastPassShort'];
+
+const SingularPlural = ['Noun', 'LongAdj', 'ShortAdj', 'Pronoun', 'PronounAdj', 'PresentTense', 
+                        'Imperative', 'PastPresAct', 'PartPresPassLong', 'PartPresPassShort', 
+                        'PartPastAct', 'PartPastPassLong', 'PartPastPassShort', 'NumeralAdj'];
+
+const ThreeGenders = ['LongAdj', 'ShortAdj', 'PronounAdj', 'PastTense', 'PartPresAct', 'PartPresPassLong', 
+                      'PartPresPassShort', 'PartPastAct', 'PartPastPassLong', 'PartPastPassShort', 'NumeralAdj'];
+
+const AnimRelevant = ['LongAdj', 'PronounAdj', 'PartPresAct', 'PartPresPassLong', 'PartPastAct', 
+                      'PartPastPassLong', 'NumeralAdj'];
+
 function wordQuery(searchString, response) {
 
     obj.clear();
@@ -30,7 +44,7 @@ function wordQuery(searchString, response) {
         
         do {
             lexeme = new Lexeme();
-            lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
+//            lexeme.lexemeId = obj.getLexemeProperty("lexemeId");
             lexeme.sourceForm = obj.getLexemeProperty("sourceForm");
             lexeme.mainSymbol = obj.getLexemeProperty("mainSymbol");
             lexeme.partOfSpeech = obj.getLexemeProperty("partOfSpeech");
@@ -106,27 +120,6 @@ function wordQuery(searchString, response) {
 }   // wordQuery()
 
 function paradigmQuery(inflectionId, response) {
-    var wordForm = {
-        wordForm : '',
-        stem : '',
-        ending : '',
-        partOfSpeech : '',
-        case : '',
-        subParadigm : '',
-        number : '',
-        gender : '',
-        person : '',
-        animacy : '',
-        reflexivity : '',
-        aspect : '',
-        status : '',
-        isIrregular : false,
-        isVariant : false,
-        isDifficult : false,
-        leadComent : '',
-        trailingComment : ''
-    };
-
     var paradigm = {
         wordForms : []
     };
@@ -151,24 +144,77 @@ function paradigmQuery(inflectionId, response) {
         }
 
         do {
+            let subParadigm = obj.getWordFormProperty("subParadigm");
+
+            var wordForm = {
+                wordForm : '',
+        //        stem : '',
+        //        ending : '',
+        //        partOfSpeech : '',
+        //        case : '',
+        //        subParadigm : '',
+        //        number : '',
+        //        gender : '',
+        //        person : '',
+        //        animacy : '',
+        //        reflexivity : '',
+        //        aspect : '',
+        //        status : '',
+        //        isIrregular : false,
+        //        isVariant : false,
+        //        isDifficult : false
+        //        leadComent : '',
+        //        trailingComment : ''
+            };
+        
             wordForm.wordForm = obj.getWordFormProperty("wordForm");
-            wordForm.stem = obj.getWordFormProperty("stem");
-            wordForm.ending = obj.getWordFormProperty("ending");
-            wordForm.partOfSpeech = obj.getWordFormProperty("partOfSpeech");
-            wordForm.case = obj.getWordFormProperty("case");
-            wordForm.subParadigm = obj.getWordFormProperty("subParadigm");
-            wordForm.number = obj.getWordFormProperty("number");
-            wordForm.gender = obj.getWordFormProperty("gender");
-            wordForm.person = obj.getWordFormProperty("person");
-            wordForm.animacy = obj.getWordFormProperty("animacy");
-            wordForm.reflexivity = obj.getWordFormProperty("reflexivity");
-            wordForm.aspect = obj.getWordFormProperty("aspect");
-            wordForm.status = obj.getWordFormProperty("status");
-            wordForm.isIrregular = obj.getWordFormProperty("isIrregular");
-            wordForm.isVariant = obj.getWordFormProperty("isVariant");
-            wordForm.isDifficult = obj.getWordFormProperty("isDifficult");
-            wordForm.leadComent = obj.getWordFormProperty("leadComment");
-            wordForm.trailingComment = obj.getWordFormProperty("trailingComment");
+
+            if (Declinables.includes(subParadigm)) {
+                wordForm.case = obj.getWordFormProperty("case");
+            }
+
+            if (SingularPlural.includes(subParadigm)) {
+                wordForm.number = obj.getWordFormProperty("number");
+            }
+
+            if (ThreeGenders.includes(subParadigm)) {
+                wordForm.gender = obj.getWordFormProperty("gender");
+            }
+
+            if ('PresentTense' === subParadigm) {
+                wordForm.person = obj.getWordFormProperty("person");
+            }
+
+            if (AnimRelevant.includes(subParadigm)) {
+                if (Declinables.includes(subParadigm)) {
+                    if ('Accusative' == wordForm.case && wordForm.gender != 'Neuter') {
+                        wordForm.animacy = obj.getWordFormProperty("animacy");
+                    }
+                } else {
+                    wordForm.animacy = obj.getWordFormProperty("animacy");      // when will this happen??
+                }
+            }
+            
+//            wordForm.reflexivity = obj.getWordFormProperty("reflexivity");
+//            wordForm.aspect = obj.getWordFormProperty("aspect");
+            let status = obj.getWordFormProperty('status');
+            if (status && status !== 'Common') {
+                wordForm.status = status;
+            }
+            let isIrregular = obj.getWordFormProperty('isIrregular');
+            if (isIrregular && isIrregular !== '') {
+                wordForm.isIrregular = isIrregular;
+            }
+//            let isVariant = obj.getWordFormProperty('isVariant');
+//            if (isVariant && isVariant != '') {
+//                wordForm.isVariant = isVariant;
+//            }
+            let isDifficult = obj.getWordFormProperty('isDifficult');
+            if (isDifficult && isDifficult !== '') {
+                wordForm.isDifficult = isDifficult;
+            }
+//            wordForm.leadComent = obj.getWordFormProperty("leadComment");
+//            wordForm.trailingComment = obj.getWordFormProperty("trailingComment");
 
             paradigm.wordForms.push(JSON.parse(JSON.stringify(wordForm)));
             
@@ -204,11 +250,11 @@ function formatSegment(segNum, segObj, text) {
     try {
         for (let at = 0; at < segObj.segmentSize(segNum); ++at) {
             const word = new Word(segObj.getWordInTextProperty(segNum, at, 'incompleteParse'), 
-                                segObj.getWordInTextProperty(segNum, at, 'lineBreak'), 
-                                segObj.getWordInTextProperty(segNum, at, 'segmentId'), 
-                                segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
-                                segObj.getWordInTextProperty(segNum, at, 'wordSource'), 
-                                segObj.getWordInTextProperty(segNum, at, 'gramHash'));
+                                  segObj.getWordInTextProperty(segNum, at, 'lineBreak'), 
+                                  segObj.getWordInTextProperty(segNum, at, 'segmentId'), 
+                                  segObj.getWordInTextProperty(segNum, at, 'seqNum'), 
+                                  segObj.getWordInTextProperty(segNum, at, 'wordSource'), 
+                                  segObj.getWordInTextProperty(segNum, at, 'gramHash'));
             text.push(word);
         }
     }
