@@ -2,15 +2,19 @@
 const url = require("url");
 const fs = require('fs');
 
-
 Object.defineProperty(exports, "__esModule", { value: true });
 var server = undefined;
 var allow_origin = undefined;
 var httpsOptions = undefined;
 var protocol = undefined;
+var port = undefined;
+var db_path = undefined;
+var config = undefined;
 
 function init(config) {
+    config = config;
     protocol = config.settings.protocol;
+    db_path = config.settings.db_path;
     if (undefined == protocol || ("http" != protocol && "https" != protocol)) {
         console.log('*** WARNING: unable to read protocol, assuming HTTP.');
         server = require("http");
@@ -37,6 +41,13 @@ function init(config) {
     if (config.misc.allow_origin != undefined) {
         allow_origin = config.misc.allow_origin;
     }
+
+    port = Number(config.settings.port);
+
+    if (typeof(port) != 'number' || isNaN(port)) {
+        console.log('*** ERROR: unable to read certs, exiting.');
+        process.exit(3);
+    }
 }       //  init()
 
 function start(route, handle) {
@@ -52,11 +63,16 @@ function start(route, handle) {
         }
         route(handle, parsedUrl.pathname, parsedUrl.searchParams, response);
     }
+
     if (protocol == "https") {
-        server.createServer(httpsOptions, onRequest).listen(8088);
+        server.createServer(httpsOptions, onRequest).listen(port);
     } else {
-        server.createServer(onRequest).listen(8088);
+        server.createServer(onRequest).listen(port);
     }
+
+    const requestHandler = require('./requestHandlers');
+    requestHandler.setDbPath(db_path);
+
     console.log('Server has started.');
 }
 

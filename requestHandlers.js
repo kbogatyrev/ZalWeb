@@ -12,6 +12,10 @@ const ThreeGenders = ['LongAdj', 'ShortAdj', 'PronounAdj', 'PastTense', 'PartPre
 const AnimRelevant = ['LongAdj', 'PronounAdj', 'PartPresAct', 'PartPresPassLong', 'PartPastAct', 
                       'PartPastPassLong', 'NumeralAdj'];
 
+function setDbPath(path) {
+    obj.setDbPath(path);
+}
+
 function wordQuery(searchString, response) {
 
     obj.clear();
@@ -290,11 +294,11 @@ function textQuery(start_id, size, response) {
     response.end();
 }
 
-var addon = require('bindings')('zal-web.node');
-var obj = new addon.ZalWeb();
-//var sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master_Full.db3";
-//obj.setDbPath(sDbPath);
+const addon = require('bindings')('zal-web.node');
+const obj = new addon.ZalWeb();
 
+//const sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master.db3";
+exports.setDbPath = setDbPath;
 exports.wordQuery = wordQuery;
 exports.paradigmQuery = paradigmQuery;
 //exports.wordParse = wordParse;
