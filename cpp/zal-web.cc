@@ -558,15 +558,14 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
       Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.").ThrowAsJavaScriptException();
   }
 
-  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master_Ts_TEST.db3";
-    auto ret = m_spDictionary->eSetDbPath(sDbPath);
+//  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master.db3";
+//  auto ret = m_spDictionary->eSetDbPath(sDbPath);
 
-
-  rc = m_spDictionary->eGetAnalytics(m_spAnalytics);
-  if (rc != Hlib::H_NO_ERROR || !m_spAnalytics)
-  {
-      Napi::TypeError::New(info.Env(), "Error accessing analytics module.").ThrowAsJavaScriptException();
-  }
+//  rc = m_spDictionary->eGetAnalytics(m_spAnalytics);
+//  if (rc != Hlib::H_NO_ERROR || !m_spAnalytics)
+//  {
+//      Napi::TypeError::New(info.Env(), "Error accessing analytics module.").ThrowAsJavaScriptException();
+//  }
 
   m_mapKeyToLexemePropHandler["lexemeId"] = fnLexemeId;
   m_mapKeyToLexemePropHandler["sourceForm"] = fnSourceForm;
