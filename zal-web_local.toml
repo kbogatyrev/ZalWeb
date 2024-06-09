@@ -1,0 +1,14 @@
+#
+# TOML config file for zal web server
+#
+
+title = "Zal web server"
+
+[settings]
+#db_path = "/home/konstantin/Zal-Web/ZalData_Master_Ts_TEST.db3"
+db_path = "/home/konstantin/Zal-Web/data/ZalData_Master.db3"
+protocol = "http"
+port = "8088"
+
+[misc]
+allow_origin = "http://localhost:3000"
