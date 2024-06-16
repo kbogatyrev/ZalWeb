@@ -4,7 +4,7 @@ to build a Linux binary. I prefer using Visual Studio 2022 to build the core C++
 1. Build the core component on a Windows 10/11 platform with WSL targeting Linux   
 -- Clone the Zal-Code repo from the GitHub: https://github.com/kbogatyrev/Zal-Core into a Windows folder   
 -- Open the Zal-Core directory as a CMake project   
--- Select "WSL:Ubuntu-..." connection as the target system and "Linux Debug" or "Linux Release" as the current configuration   
+-- Select **WSL:Ubuntu-...** connection as the target system and "Linux Debug" or "Linux Release" as the current configuration   
 -- Build the Linux Binary   
 
 3. Build the Node C++ add-on (Visual Studio Code)   
