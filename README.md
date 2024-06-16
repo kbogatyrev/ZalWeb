@@ -1,4 +1,4 @@
-Build the NodeJS server using Visual Studio 2022 (C++ core) and Visual Studio Code (NodeJS add-on and Javacript components)
+Build the NodeJS server using Visual Studio 2022 (C++ core) and Visual Studio Code (NodeJS add-on and JavaScript components)
 
 1. Build the core component (Visual Studio 2022)   
 -- Clone the Zal-Code repo from the GitHub: https://github.com/kbogatyrev/Zal-Core targeting a standard Windows folder   
