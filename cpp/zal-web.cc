@@ -691,21 +691,6 @@ Napi::Value ZalWeb::GetLexemesByInitialForm(const Napi::CallbackInfo& info)
     if (Hlib::H_FALSE == rc) {
       return Napi::Boolean::New(info.Env(), false);
     }
-
-/*
-    rc = m_pDictionary->eCreateLexemeEnumerator(m_pLexemeEnumerator);
-    if (rc != Hlib::H_NO_ERROR) {
-       Napi::TypeError::New(env, "Unable to create lexeme enumerator.")
-          .ThrowAsJavaScriptException();
-      return Napi::Boolean::New(info.Env(), false);
-    }
-    rc = m_pLexemeEnumerator->eGetFirstLexeme(m_pCurrentLexeme);
-    if (rc != Hlib::H_NO_ERROR) {
-       Napi::TypeError::New(env, "Unable to load first lexeme.")
-          .ThrowAsJavaScriptException();
-      return Napi::Boolean::New(info.Env(), false);
-    }
-*/
     return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -724,7 +709,6 @@ Napi::Value ZalWeb::LoadFirstLexeme(const Napi::CallbackInfo& info)
             .ThrowAsJavaScriptException();
         return Napi::Boolean::New(info.Env(), false);
     }
-
     return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -750,6 +734,10 @@ Napi::Value ZalWeb::LoadFirstInflection(const Napi::CallbackInfo& info)
     ERROR_LOG(L"Inflection instance is NULL.");
     return Napi::Boolean::New(info.Env(), false);
   }
+
+  auto llId = m_spCurrentInflection->llInflectionId();
+  m_mapInflectionIdToInflectionObj[llId] = m_spCurrentInflection;
+
   return Napi::Boolean::New(info.Env(), true);
 }
 
@@ -757,6 +745,10 @@ Napi::Value ZalWeb::LoadNextInflection(const Napi::CallbackInfo& info)
 {
   auto rc = m_spInflectionEnumerator->eGetNextInflection(m_spCurrentInflection);
   auto bRet = (Hlib::H_NO_ERROR == rc) ? true : false;
+  if (bRet) {
+    auto llId = m_spCurrentInflection->llInflectionId();
+    m_mapInflectionIdToInflectionObj[llId] = m_spCurrentInflection;
+  }
   return Napi::Boolean::New(info.Env(), bRet);
 }
 
@@ -856,20 +848,24 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);   
   }
 
-//  auto sInflectionId = info[0].As<Napi::String>().Utf8Value();
-//  std::stringstream s;
-//  s << sInflectionId;
-//  long long llInflectionId {0};
-//  s >> llInflectionId;
+  if (!info[0].IsNumber()) {
+        Napi::TypeError::New(info.Env(), "Inflection ID is not numeric.").ThrowAsJavaScriptException();
+        return Napi::Boolean::New(info.Env(), false); 
+  }
 
-// TODO: llInflectionId --> inflection obj
+  auto llInflectionId = info[0].As<Napi::BigInt>().ToNumber();
+  auto itInflection = m_mapInflectionIdToInflectionObj.find(llInflectionId);
+  if (m_mapInflectionIdToInflectionObj.end() == itInflection) {
+    Napi::TypeError::New(info.Env(), "Unable to find inflection object for this key.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
 
-  if (!m_spCurrentInflection) {
+  if (nullptr == itInflection->second) {
     Napi::TypeError::New(info.Env(), "Inflection pointer is NULL.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  auto rc = m_spCurrentInflection->eGenerateParadigm();
+  auto rc = itInflection->second->eGenerateParadigm();
   if (rc != Hlib::H_NO_ERROR) {
     Napi::TypeError::New(info.Env(), "Unable to generate paradigm.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
@@ -879,12 +875,29 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
 
 Napi::Value ZalWeb::LoadFirstWordForm(const Napi::CallbackInfo& info)
 {
-  if (!m_spCurrentInflection) {
+  if (info.Length() < 1) {
+    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+
+  if (!info[0].IsNumber()) {
+        Napi::TypeError::New(info.Env(), "Inflection ID is not numeric.").ThrowAsJavaScriptException();
+        return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  auto llInflectionId = info[0].As<Napi::BigInt>().ToNumber();
+  auto itInflection = m_mapInflectionIdToInflectionObj.find(llInflectionId);
+  if (m_mapInflectionIdToInflectionObj.end() == itInflection) {
+    Napi::TypeError::New(info.Env(), "Unable to find inflection object for this key.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
+
+  if (nullptr == itInflection->second) {
     Napi::TypeError::New(info.Env(), "Inflection pointer is NULL.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  auto rc = m_spCurrentInflection->eGetFirstWordForm(m_spCurrentWordForm);
+  auto rc = itInflection->second->eGetFirstWordForm(m_spCurrentWordForm);
   if (rc != Hlib::H_NO_ERROR) {
     return Napi::Boolean::New(info.Env(), false);
   }
@@ -893,12 +906,24 @@ Napi::Value ZalWeb::LoadFirstWordForm(const Napi::CallbackInfo& info)
 
 Napi::Value ZalWeb::LoadNextWordForm(const Napi::CallbackInfo& info)
 {
-  if (!m_spCurrentInflection) {
-    Napi::TypeError::New(info.Env(), "Inflection pointer is NULL.").ThrowAsJavaScriptException();
+  if (info.Length() < 1) {
+    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
+  }
+
+  if (!info[0].IsNumber()) {
+        Napi::TypeError::New(info.Env(), "Inflection ID is not numeric.").ThrowAsJavaScriptException();
+        return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  auto llInflectionId = info[0].As<Napi::BigInt>().ToNumber();
+  auto itInflection = m_mapInflectionIdToInflectionObj.find(llInflectionId);
+  if (m_mapInflectionIdToInflectionObj.end() == itInflection) {
+    Napi::TypeError::New(info.Env(), "Unable to find inflection object for this key.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
 
-  auto rc = m_spCurrentInflection->eGetNextWordForm(m_spCurrentWordForm);
+  auto rc = itInflection->second->eGetNextWordForm(m_spCurrentWordForm);
   if (rc != Hlib::H_NO_ERROR) {
     return Napi::Boolean::New(info.Env(), false);
   }

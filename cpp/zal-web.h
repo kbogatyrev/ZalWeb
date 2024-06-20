@@ -201,6 +201,8 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
     shared_ptr<Hlib::CWordForm> m_spCurrentWordForm;
     shared_ptr<Hlib::CAnalytics> m_spAnalytics;
 
+    std::map<int64_t, shared_ptr<Hlib::CInflection>> m_mapInflectionIdToInflectionObj;
+
     std::map<int64_t, std::vector<Hlib::StWordContext>> m_mapWordsInSegment; // word, stress, gram hash
     std::map<int64_t, Hlib::CEString> m_mapSegments;  // text
     std::map<int64_t, int64_t> m_mapSegNumToDbId;     // sequential number of the segment in read order -> db ID
