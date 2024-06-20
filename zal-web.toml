@@ -5,8 +5,8 @@
 title = "Zal web server"
 
 [settings]
-db_path_db = "/home/konstantin/zal/Zal-Web/data/ZalData_demo.db3"
-protocol = "http"
+db_path = "/home/konstantin/zal/Zal-Web/data/ZalData_Master.db3"
+protocol = "https"
 port = "8088"
 
 [certificates]
