@@ -151,10 +151,12 @@ function wordQuery(searchString, response) {
       if (at2) {
         inflection["accentType2"] = at2;
       }
-      inflection["aspectPair"] = zalWebObj.getInflectionProperty(
-        itInflectionId.value,
-        "aspectPair"
-      );
+      if ("Verb" === lexeme["partOfSpeech"]) {
+        inflection["aspectPair"] = zalWebObj.getInflectionProperty(
+          itInflectionId.value,
+          "aspectPair"
+        );
+      }
       lexeme["inflections"].push(inflection);
       itInflectionId = iGen.next();
     }
