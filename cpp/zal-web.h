@@ -14,6 +14,15 @@ using fnHandlerInflection = std::function<Napi::Value(const Napi::CallbackInfo& 
 using fnHandlerWordForm = std::function<Napi::Value(const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm>)>;
 using fnHandlerWordInText = std::function<Napi::Value(const Napi::CallbackInfo& info, Hlib::StWordContext)>;
 
+enum class ET_LexemeStatus {
+  LexemeStatusUndefined,
+  LexemeStatusNew,
+  LexemeStatusDescriptor,
+  LexemeStatusParadigm,
+  LexemeStatusTabClsed,
+  LexemeStatusCount
+};
+
 static std::map<Hlib::ET_AccentType, std::string> MapAccentTypeToString {
   { Hlib::ET_AccentType::AT_UNDEFINED, "" },
   { Hlib::ET_AccentType::AT_A, "a" },
@@ -205,9 +214,11 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
     std::shared_ptr<Hlib::CAnalytics> m_spAnalytics;
 
     // Lexemes, inflections and word forms
-    std::vector<int64_t> m_vecNewLexemeIds;   // not yet displayed
+    std::multimap<Hlib::CEString, int64_t> m_mmapWordToLexemeIds;
+    std::map<int64_t, ET_LexemeStatus> m_mapLexemeStatus;   // status --> lexemeId
     std::multimap<int64_t, int64_t> m_mmapLexemeIdToInflectionIds;
     std::map<int64_t, shared_ptr<Hlib::CLexeme>> m_mapLexemeIdToLexemeObj;
+    std::map<int64_t, bool> m_mapInflectionStatus;
     std::map<int64_t, shared_ptr<Hlib::CInflection>> m_mapInflectionIdToInflectionObj;
     std::multimap<int64_t, Hlib::CEString> m_mmapInflectionIdToGramHash;
     std::multimap<Hlib::CEString, std::shared_ptr<Hlib::CWordForm>> m_mmapGramHashToWordFormObj;

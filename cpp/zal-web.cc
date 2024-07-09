@@ -717,6 +717,15 @@ Napi::Value ZalWeb::WordQuery(const Napi::CallbackInfo& info)
     }
 
     auto sSearchWord = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
+
+    auto pairIdRange = m_mmapWordToLexemeIds.equal_range(sSearchWord);
+    if (pairIdRange.first != pairIdRange.second) {
+      for (auto it = pairIdRange.first; it != pairIdRange.second; ++it) {
+        m_mapLexemeStatus[(*it).second] = ET_LexemeStatus::LexemeStatusNew;
+      }
+      return Napi::Boolean::New(info.Env(), true);  
+    }
+
     auto rc = m_spDictionary->eGetLexemesByInitialForm(sSearchWord);
     if (rc != Hlib::H_NO_MORE && rc != Hlib::H_FALSE) {
        Napi::TypeError::New(env, "Lexeme lookup failed.").ThrowAsJavaScriptException();
@@ -745,7 +754,8 @@ Napi::Value ZalWeb::WordQuery(const Napi::CallbackInfo& info)
       if (!bLoadInflections(info, spLexeme)) {
         return Napi::Boolean::New(info.Env(), false);
       }
-      m_vecNewLexemeIds.push_back(spLexeme->llLexemeId());
+      m_mmapWordToLexemeIds.insert(make_pair(sSearchWord, spLexeme->llLexemeId()));
+      m_mapLexemeStatus.insert(make_pair(spLexeme->llLexemeId(), ET_LexemeStatus::LexemeStatusNew));
       rc = m_spLexemeEnumerator->eGetNextLexeme(spLexeme);
       if (rc != Hlib::H_NO_ERROR && rc != Hlib::H_NO_MORE) {
         Napi::TypeError::New(info.Env(), "Unable to acquire lexeme.")
@@ -753,29 +763,40 @@ Napi::Value ZalWeb::WordQuery(const Napi::CallbackInfo& info)
         return Napi::Boolean::New(info.Env(), false);
       }
     }
-
     return Napi::Boolean::New(info.Env(), true);
-
 }   //  WordQuery()
 
 Napi::Value ZalWeb::GetLexemeId(const Napi::CallbackInfo& info)
 {
-    if (info.Length() != 1) {
-      Napi::TypeError::New(info.Env(), "Wrong number of arguments").ThrowAsJavaScriptException();
-      return Napi::Boolean::New(info.Env(), false);
-    }
+  if (info.Length() != 1) {
+    Napi::TypeError::New(info.Env(), "Wrong number of arguments").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
 
-    if (!info[0].IsNumber()) {
-       Napi::TypeError::New(info.Env(), "Lexeme index must be numeric.").ThrowAsJavaScriptException();
-      return Napi::Boolean::New(info.Env(), false);
-    }
+  if (!info[0].IsNumber()) {
+    Napi::TypeError::New(info.Env(), "Lexeme index must be numeric.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);
+  }
 
-    int iAt = info[0].As<Napi::Number>().ToNumber();
-    if (m_vecNewLexemeIds.size() <= iAt) {
-      return Napi::Boolean::New(info.Env(), false);
+  int iIdx = info[0].As<Napi::Number>().ToNumber();
+  int iCount = 0;
+  auto it = m_mapLexemeStatus.begin();
+  for (; it != m_mapLexemeStatus.end(); ++it) {
+    if (ET_LexemeStatus::LexemeStatusNew == (*it).second) {
+      if (iCount++ == iIdx) {
+        return Napi::Number::New(info.Env(), (*it).first);
+      }      
     }
-    return Napi::Number::New(info.Env(), m_vecNewLexemeIds[iAt]);
-}
+  }
+
+  // End of enumeration
+  if (m_mapLexemeStatus.end() == it) {
+    for (it = m_mapLexemeStatus.begin(); it != m_mapLexemeStatus.end(); ++it) {
+      (*it).second = ET_LexemeStatus::LexemeStatusDescriptor;
+    }
+  }
+  return Napi::Boolean::New(info.Env(), false); 
+}   // GetLexemeId()
 
 
 /*

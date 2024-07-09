@@ -165,12 +165,13 @@ function wordQuery(searchString, response) {
   }
 
   // Get lexemes' properties
-  console.log(JSON.stringify(listLexemes));
+  //  console.log(JSON.stringify(listLexemes));
 
   response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
-  //  var json = JSON.stringify(lexData.listLexemes);
-  //  console.log(JSON.parse(json));
-  //  response.write(json);
+  var json = JSON.stringify(listLexemes);
+  listLexemes.length = 0;
+  console.log(JSON.parse(json));
+  response.write(json);
   response.end();
 } // wordQuery()
 
