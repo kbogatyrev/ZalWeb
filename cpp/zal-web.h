@@ -190,9 +190,11 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
     Napi::Value GetInflectionProperty(const Napi::CallbackInfo& info);
 //    Napi::Value SetInflectionProperty(const Napi::CallbackInfo& info);
     Napi::Value GenerateParadigm(const Napi::CallbackInfo& info);
-    Napi::Value GetFirstWordForm(const Napi::CallbackInfo& info);
-    Napi::Value GetNextWordForm(const Napi::CallbackInfo& info);
-//    Napi::Value GetWordFormProperty(const Napi::CallbackInfo& info);
+    Napi::Value GetGramHash(const Napi::CallbackInfo& info);
+    Napi::Value GetWordForm(const Napi::CallbackInfo& info);
+//    Napi::Value GetFirstWordForm(const Napi::CallbackInfo& info);
+//    Napi::Value GetNextWordForm(const Napi::CallbackInfo& info);
+    Napi::Value GetWordFormProperty(const Napi::CallbackInfo& info);
 //    Napi::Value SetWordFormProperty(const Napi::CallbackInfo& info);
 
     //
@@ -221,9 +223,10 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
     std::map<int64_t, bool> m_mapInflectionStatus;
     std::map<int64_t, shared_ptr<Hlib::CInflection>> m_mapInflectionIdToInflectionObj;
     std::multimap<int64_t, Hlib::CEString> m_mmapInflectionIdToGramHash;
-    std::multimap<Hlib::CEString, std::shared_ptr<Hlib::CWordForm>> m_mmapGramHashToWordFormObj;
+    std::map<Hlib::CEString, int> m_mapGramHashToFormCount;
+    std::map<Hlib::CEString, std::shared_ptr<Hlib::CWordForm>> m_mapKeyToWordFormObj;
 
-    // Property handlers for lexemes, inflections and wordforms
+    // Property handlers 
     std::map<string, fnHandlerLexeme> m_mapKeyToLexemePropHandler;
     std::map<string, fnHandlerInflection> m_mapKeyToInflectionPropHandler;
     std::map<string, fnHandlerWordForm> m_mapKeyToWordFormPropHandler;

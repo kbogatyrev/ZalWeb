@@ -54,10 +54,11 @@ const AnimRelevant = [
 ];
 
 const listLexemes = [];
+const objWordForms = {};
 
 //class Inflection {}
 
-// -------------------------------------------------------------------
+// -----------------------------------------------------
 
 function setDbPath(path) {
   zalWebObj.setDbPath(path);
@@ -86,6 +87,34 @@ function* inflectionGenerator(lexemeId) {
     ++idx;
   }
 }
+
+function* gramHashGenerator(inflectionId) {
+  let idx = 0;
+  while (true) {
+    let rc = zalWebObj.getGramHash(inflectionId, idx);
+    if (rc === false) {
+      return;
+    }
+    yield rc;
+    ++idx;
+  }
+}
+
+function* wordFormGenerator(inflectionId, gramHash) {
+  let idx = 0;
+  while (true) {
+    let rc = zalWebObj.getWordForm(inflectionId, gramHash, idx);
+    if (rc === false) {
+      return;
+    }
+    yield rc;
+    ++idx;
+  }
+}
+
+//
+//  Lexeme + inflections
+//
 
 function wordQuery(searchString, response) {
   zalWebObj.clear();
@@ -175,15 +204,72 @@ function wordQuery(searchString, response) {
   response.end();
 } // wordQuery()
 
-function paradigmQuery(inflectionId, response) {
-  var paradigm = {
-    wordForms: [],
-  };
+//
+//  Paradigm
+//
+function collectWordFormProperties(wordFormKey, objWordForm) {
+  objWordForm.wordForm = zalWebObj.getWordFormProperty(wordFormKey, "wordForm");
 
+  let subParadigm = zalWebObj.getWordFormProperty(wordFormKey, "subParadigm");
+
+  if (Declinables.includes(subParadigm)) {
+    objWordForm.case = zalWebObj.getWordFormProperty(wordFormKey, "case");
+  }
+
+  if (SingularPlural.includes(subParadigm)) {
+    objWordForm.number = zalWebObj.getWordFormProperty(wordFormKey, "number");
+  }
+
+  if (ThreeGenders.includes(subParadigm)) {
+    objWordForm.gender = zalWebObj.getWordFormProperty(wordFormKey, "gender");
+  }
+
+  if ("PresentTense" === subParadigm) {
+    objWordForm.person = zalWebObj.getWordFormProperty(wordFormKey, "person");
+  }
+
+  if (AnimRelevant.includes(subParadigm)) {
+    if (Declinables.includes(subParadigm)) {
+      if ("Accusative" == wordForm.case && wordForm.gender != "Neuter") {
+        objWordForm.animacy = zalWebObj.getWordFormProperty(
+          wordFormKey,
+          "animacy"
+        );
+      }
+    } else {
+      objWordForm.animacy = zalWebObj.getWordFormProperty(
+        wordFormKey,
+        "animacy"
+      ); // when will this happen??
+    }
+  }
+
+  //            wordForm.reflexivity = zalWebObj.getWordFormProperty("reflexivity");
+  //            wordForm.aspect = zalWebObj.getWordFormProperty("aspect");
+  let status = zalWebObj.getWordFormProperty(wordFormKey, "status");
+  if (status && status !== "Common") {
+    objWordForm.status = status;
+  }
+  let isIrregular = zalWebObj.getWordFormProperty(wordFormKey, "isIrregular");
+  if (isIrregular && isIrregular !== "") {
+    objWordForm.isIrregular = isIrregular;
+  }
+  //            let isVariant = zalWebObj.getWordFormProperty('isVariant');
+  //            if (isVariant && isVariant != '') {
+  //                wordForm.isVariant = isVariant;
+  //            }
+  let isDifficult = zalWebObj.getWordFormProperty(wordFormKey, "isDifficult");
+  if (isDifficult) {
+    objWordForm.isDifficult = isDifficult;
+  }
+  //            wordForm.leadComent = zalWebObj.getWordFormProperty("leadComment");
+  //            wordForm.trailingComment = zalWebObj.getWordFormProperty("trailingComment");
+}
+
+function paradigmQuery(inflectionId, response) {
   response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
 
   try {
-    console.log("typeof = " + typeof inflectionId);
     var bGenerated = zalWebObj.generateParadigm(inflectionId);
     if (!bGenerated) {
       console.error(
@@ -195,94 +281,47 @@ function paradigmQuery(inflectionId, response) {
       return;
     }
 
-    var bWordFormLoaded = zalWebObj.loadFirstWordForm(inflectionId);
-    if (!bWordFormLoaded) {
-      console.error("loadFirstWordForm() failed.");
-      response.write("Internal error.");
-      response.end();
-      return;
+    listWordForms = [];
+
+    const hashGen = gramHashGenerator(inflectionId);
+    let itGramHash = hashGen.next();
+    while (!itGramHash.done) {
+      const wordFormGen = wordFormGenerator(inflectionId, itGramHash.value);
+      itWordFormKey = wordFormGen.next();
+      let objWordForm = {};
+      while (!itWordFormKey.done) {
+        collectWordFormProperties(itWordFormKey.value, objWordForm);
+        listWordForms.push(objWordForm);
+        itWordFormKey = wordFormGen.next();
+      }
+      itGramHash = hashGen.next();
     }
 
-    do {
-      let subParadigm = zalWebObj.getWordFormProperty("subParadigm");
+    let objParadigm = {};
+    objParadigm["wordForms"] = listWordForms;
 
-      var wordForm = {
-        wordForm: "",
-        //        stem : '',
-        //        ending : '',
-        //        partOfSpeech : '',
-        //        case : '',
-        //        subParadigm : '',
-        //        number : '',
-        //        gender : '',
-        //        person : '',
-        //        animacy : '',
-        //        reflexivity : '',
-        //        aspect : '',
-        //        status : '',
-        //        isIrregular : false,
-        //        isVariant : false,
-        //        isDifficult : false
-        //        leadComent : '',
-        //        trailingComment : ''
-      };
+    //    do {
+    // wordForm: "",
+    //        stem : '',
+    //        ending : '',
+    //        partOfSpeech : '',
+    //        case : '',
+    //        subParadigm : '',
+    //        number : '',
+    //        gender : '',
+    //        person : '',
+    //        animacy : '',
+    //        reflexivity : '',
+    //        aspect : '',
+    //        status : '',
+    //        isIrregular : false,
+    //        isVariant : false,
+    //        isDifficult : false
+    //        leadComent : '',
+    //        trailingComment : ''
+    //      };
 
-      wordForm.wordForm = zalWebObj.getWordFormProperty("wordForm");
-
-      if (Declinables.includes(subParadigm)) {
-        wordForm.case = zalWebObj.getWordFormProperty("case");
-      }
-
-      if (SingularPlural.includes(subParadigm)) {
-        wordForm.number = zalWebObj.getWordFormProperty("number");
-      }
-
-      if (ThreeGenders.includes(subParadigm)) {
-        wordForm.gender = zalWebObj.getWordFormProperty("gender");
-      }
-
-      if ("PresentTense" === subParadigm) {
-        wordForm.person = zalWebObj.getWordFormProperty("person");
-      }
-
-      if (AnimRelevant.includes(subParadigm)) {
-        if (Declinables.includes(subParadigm)) {
-          if ("Accusative" == wordForm.case && wordForm.gender != "Neuter") {
-            wordForm.animacy = zalWebObj.getWordFormProperty("animacy");
-          }
-        } else {
-          wordForm.animacy = zalWebObj.getWordFormProperty("animacy"); // when will this happen??
-        }
-      }
-
-      //            wordForm.reflexivity = zalWebObj.getWordFormProperty("reflexivity");
-      //            wordForm.aspect = zalWebObj.getWordFormProperty("aspect");
-      let status = zalWebObj.getWordFormProperty("status");
-      if (status && status !== "Common") {
-        wordForm.status = status;
-      }
-      let isIrregular = zalWebObj.getWordFormProperty("isIrregular");
-      if (isIrregular && isIrregular !== "") {
-        wordForm.isIrregular = isIrregular;
-      }
-      //            let isVariant = zalWebObj.getWordFormProperty('isVariant');
-      //            if (isVariant && isVariant != '') {
-      //                wordForm.isVariant = isVariant;
-      //            }
-      let isDifficult = zalWebObj.getWordFormProperty("isDifficult");
-      if (isDifficult) {
-        console.log("********************************************************");
-      }
-      if (isDifficult && isDifficult !== "") {
-        wordForm.isDifficult = isDifficult;
-      }
-      //            wordForm.leadComent = zalWebObj.getWordFormProperty("leadComment");
-      //            wordForm.trailingComment = zalWebObj.getWordFormProperty("trailingComment");
-
-      paradigm.wordForms.push(JSON.parse(JSON.stringify(wordForm)));
-    } while (zalWebObj.loadNextWordForm(inflectionId));
-
-    var json = JSON.stringify(paradigm);
+    var json = JSON.stringify(objParadigm);
     console.log(JSON.parse(json));
     response.write(json);
     response.end();

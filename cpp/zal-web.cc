@@ -35,8 +35,10 @@ Napi::Object ZalWeb::Init(Napi::Env env, Napi::Object exports)
                                    InstanceMethod("getInflectionId", &ZalWeb::GetInflectionId),
                                    InstanceMethod("getInflectionProperty", &ZalWeb::GetInflectionProperty),
                                    InstanceMethod("generateParadigm", &ZalWeb::GenerateParadigm),
+                                   InstanceMethod("getGramHash", &ZalWeb::GetGramHash),
 //                                   InstanceMethod("setWordFormProperty", &ZalWeb::SetWordFormProperty),
-//                                   InstanceMethod("getWordFormProperty", &ZalWeb::GetWordFormProperty),
+                                   InstanceMethod("getWordForm", &ZalWeb::GetWordForm),
+                                   InstanceMethod("getWordFormProperty", &ZalWeb::GetWordFormProperty),
                                    InstanceMethod("loadFirstSegment", &ZalWeb::LoadFirstSegment),
                                    InstanceMethod("loadNextSegment", &ZalWeb::LoadNextSegment),
                                    InstanceMethod("segmentSize", &ZalWeb::SegmentSize),
@@ -493,9 +495,10 @@ fnHandlerWordForm fnIsVariant = [](const Napi::CallbackInfo& info, shared_ptr<Hl
 
 fnHandlerWordForm fnIsDifficult = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
-  auto sGramHash = spWordForm->sGramHash();
-//  &&&&
-  return Napi::Boolean::New(info.Env(), false);
+  const auto& sGramHash = spWordForm->sGramHash();
+  auto eStatus = spWordForm->pInflection()->eIsFormDifficult(sGramHash);
+  auto bStatus = spWordForm->pInflection()->bIsFormDifficult(sGramHash);
+  return Napi::Boolean::New(info.Env(), bStatus);
 };
 
 /*
@@ -964,7 +967,7 @@ Napi::Value ZalWeb::GetLexemeProperty(const Napi::CallbackInfo& info)
 Napi::Value ZalWeb::GetInflectionId(const Napi::CallbackInfo& info)
 {
   if (info.Length() != 2) {
-    Napi::TypeError::New(info.Env(), "Expected one argument.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Expected two arguments.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);   
   }
 
@@ -1036,6 +1039,8 @@ Napi::Value ZalWeb::GetInflectionProperty(const Napi::CallbackInfo& info)
 
 Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
 {
+  m_mapGramHashToFormCount.clear();
+
   if (info.Length() != 1) {
     Napi::TypeError::New(info.Env(), "Expected two arguments.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);   
@@ -1074,7 +1079,15 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
 
   while (Hlib::H_NO_ERROR == rc) {
     m_mmapInflectionIdToGramHash.emplace(make_pair(spInflection->llInflectionId(), spWf->sGramHash()));
-    m_mmapGramHashToWordFormObj.emplace(make_pair(spWf->sGramHash(), spWf));
+    auto itCount = m_mapGramHashToFormCount.find(spWf->sGramHash());
+    if (m_mapGramHashToFormCount.end() == itCount) {
+      m_mapGramHashToFormCount[spWf->sGramHash()] = 0;
+    }
+    auto iIdx = m_mapGramHashToFormCount[spWf->sGramHash()];
+    m_mapGramHashToFormCount[spWf->sGramHash()] = iIdx + 1;
+    auto sIdx = Hlib::CEString::sToString(iIdx);
+    auto sKey = Hlib::CEString::sToString(spInflection->llInflectionId()) + L"-" + spWf->sGramHash() + L"-" + sIdx;   
+    m_mapKeyToWordFormObj.emplace(make_pair(sKey, spWf));
     rc = spInflection->eGetNextWordForm(spWf);
     if (rc != Hlib::H_NO_ERROR && rc != Hlib::H_FALSE && rc != Hlib::H_NO_MORE) {
       Napi::TypeError::New(info.Env(), "Error retrieving next word form.").ThrowAsJavaScriptException();
@@ -1085,90 +1098,107 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
 
 }   // GenerateParadigm()
 
-/*
-Napi::Value ZalWeb::GetFirstWordForm(const Napi::CallbackInfo& info)
+Napi::Value ZalWeb::GetGramHash(const Napi::CallbackInfo& info)
 {
-  if (info.Length() < 1) {
-    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
-    return Napi::Boolean::New(info.Env(), false);   
-  }
-
-  if (!info[0].IsNumber()) {
-        Napi::TypeError::New(info.Env(), "Inflection ID is not numeric.").ThrowAsJavaScriptException();
-        return Napi::Boolean::New(info.Env(), false); 
-  }
-
-  auto llInflectionId = info[0].As<Napi::Number>().ToNumber();
-  auto itInflection = m_mmapInflectionIdToWordFormObj.find(llInflectionId);
-  if (m_mmapInflectionIdToWordFormObj.end() == itInflection) {
-    Napi::TypeError::New(info.Env(), "Unable to find inflection object for this key.").ThrowAsJavaScriptException();
-    return Napi::Boolean::New(info.Env(), false);
-  }
-  return Napi::Boolean::New(info.Env(), true);
-}
-
-Napi::Value ZalWeb::GetNextWordForm(const Napi::CallbackInfo& info)
-{
-  if (info.Length() < 1) {
-    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
-    return Napi::Boolean::New(info.Env(), false);   
-  }
-
-  if (!info[0].IsNumber()) {
-        Napi::TypeError::New(info.Env(), "Inflection ID is not numeric.").ThrowAsJavaScriptException();
-        return Napi::Boolean::New(info.Env(), false); 
-  }
-
-  auto llInflectionId = info[0].As<Napi::Number>().ToNumber();
-  auto itInflection = m_mapInflectionIdToInflectionObj.find(llInflectionId);
-  if (m_mapInflectionIdToInflectionObj.end() == itInflection) {
-    Napi::TypeError::New(info.Env(), "Unable to find inflection object for this key.").ThrowAsJavaScriptException();
-    return Napi::Boolean::New(info.Env(), false);
-  }
-
-  auto rc = itInflection->second->eGetNextWordForm(m_spCurrentWordForm);
-  if (rc != Hlib::H_NO_ERROR) {
-    return Napi::Boolean::New(info.Env(), false);
-  }
-  return Napi::Boolean::New(info.Env(), true);
-}
-
-Napi::Value ZalWeb::SetWordFormProperty(const Napi::CallbackInfo& info) 
-{
-  if (info.Length() <= 1) {
+  if (info.Length() != 2) {
     Napi::TypeError::New(info.Env(), "Expected two arguments.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);   
   }
-  else {
-    return Napi::Boolean::New(info.Env(), true);
-  }
-}
 
-Napi::Value ZalWeb::GetWordFormProperty(const Napi::CallbackInfo& info) 
+  if (!info[0].IsNumber()) {
+    Napi::TypeError::New(info.Env(), "Inflection ID is not numeric.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  int64_t llInflectionId = info[0].As<Napi::Number>().ToNumber();
+
+  if (!info[1].IsNumber()) {
+    Napi::TypeError::New(info.Env(), "Gram hash index is not numeric.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  int iIdx = info[1].As<Napi::Number>().ToNumber();
+  auto pairIdRange = m_mmapInflectionIdToGramHash.equal_range(llInflectionId);
+  auto nHashes = std::distance(pairIdRange.first, pairIdRange.second);
+  if (iIdx < 0 || iIdx > nHashes) {    // Unexpected index values
+    Napi::TypeError::New(info.Env(), "Gram hash index out of range.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  // End of enumeration
+  if (iIdx == nHashes) {
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  auto itPos = pairIdRange.first;
+  std::advance(itPos, iIdx);
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8((*itPos).second));
+
+}   //  GetGramHash()
+
+Napi::Value ZalWeb::GetWordForm(const Napi::CallbackInfo& info)
 {
-  if (info.Length() < 1) {
-    Napi::TypeError::New(info.Env(), "No argument.").ThrowAsJavaScriptException();
+  if (info.Length() != 3) {
+    Napi::TypeError::New(info.Env(), "Expected three arguments.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);   
   }
 
-  if (nullptr == m_spCurrentWordForm) {
-    Napi::TypeError::New(info.Env(), "WordForm pointer is NULL.").ThrowAsJavaScriptException();
-    return Napi::Boolean::New(info.Env(), false);
+  if (!info[0].IsNumber()) {
+    Napi::TypeError::New(info.Env(), "Inflection ID is not numeric.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+  int64_t llInflectionId = info[0].As<Napi::Number>().ToNumber();
+
+  if (!info[1].IsString()) {
+    Napi::TypeError::New(info.Env(), "Gram hash is not a string.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+  auto sGramHash = Hlib::CEString::sFromUtf8(info[1].As<Napi::String>().Utf8Value());
+
+  int iIdx = info[2].As<Napi::Number>().ToNumber();
+  
+  auto sKey =  Hlib::CEString::sToString(llInflectionId) + L"-" + sGramHash + L"-" + Hlib::CEString::sToString(iIdx);
+  if (m_mapKeyToWordFormObj.find(sKey) == m_mapKeyToWordFormObj.end()) {
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+  return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sKey));
+
+}   //  GetWordForm()
+
+Napi::Value ZalWeb::GetWordFormProperty(const Napi::CallbackInfo& info) 
+{
+  if (info.Length() != 2) {
+    Napi::TypeError::New(info.Env(), "Expected two arguments.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false);   
   }
 
-  auto sKey = info[0].As<Napi::String>().Utf8Value();
-  auto itProperty = m_mapKeyToWordFormPropHandler.find(sKey);
+  if (!info[0].IsString()) {
+    Napi::TypeError::New(info.Env(), "Word form key is not a string.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  auto sWfKey = Hlib::CEString::sFromUtf8(info[0].As<Napi::String>().Utf8Value());
+  if (m_mapKeyToWordFormObj.find(sWfKey) == m_mapKeyToWordFormObj.end()) {
+    Napi::TypeError::New(info.Env(), "Word form not found.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+  auto spWordForm = m_mapKeyToWordFormObj[sWfKey];
+
+  if (!info[1].IsString()) {
+    Napi::TypeError::New(info.Env(), "Word form property is not a string.").ThrowAsJavaScriptException();
+    return Napi::Boolean::New(info.Env(), false); 
+  }
+
+  auto sPropKey = info[1].As<Napi::String>().Utf8Value();
+  auto itProperty = m_mapKeyToWordFormPropHandler.find(sPropKey);
   if (m_mapKeyToWordFormPropHandler.end() == itProperty) {
-//    std::cout << "ERROR: property " << sKey << " not found.\n";
-    Hlib::CEString sMsg(L"Property ");
-    sMsg += Hlib::CEString::sFromUtf8(sKey);
-    sMsg += L" not found.";
-    ERROR_LOG(sMsg);
+    Napi::TypeError::New(info.Env(), "Word form property not found.").ThrowAsJavaScriptException();
     return Napi::Boolean::New(info.Env(), false);
   }
-  return itProperty->second(info, m_spCurrentWordForm);
-}
-*/
+  return itProperty->second(info, spWordForm);
+
+}   //  GetWordFormProperty()
+
 //-----------------------------------------------------------------------------------------------------
 
 Napi::Value ZalWeb::GetWordInTextProperty(const Napi::CallbackInfo& info) 
