@@ -54,7 +54,7 @@ const AnimRelevant = [
 ];
 
 const listLexemes = [];
-const objWordForms = {};
+const objInflectionToWordForms = {};
 
 //class Inflection {}
 
@@ -266,9 +266,7 @@ function collectWordFormProperties(wordFormKey, objWordForm) {
   //            wordForm.trailingComment = zalWebObj.getWordFormProperty("trailingComment");
 }
 
-function paradigmQuery(inflectionId, response) {
-  response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
-
+function generateParadigm(inflectionId, objParadigm) {
   try {
     var bGenerated = zalWebObj.generateParadigm(inflectionId);
     if (!bGenerated) {
@@ -297,8 +295,8 @@ function paradigmQuery(inflectionId, response) {
       itGramHash = hashGen.next();
     }
 
-    let objParadigm = {};
     objParadigm["wordForms"] = listWordForms;
+    objInflectionToWordForms[inflectionId] = objParadigm;
 
     //    do {
     // wordForm: "",
@@ -320,14 +318,26 @@ function paradigmQuery(inflectionId, response) {
     //        leadComent : '',
     //        trailingComment : ''
     //      };
-
-    var json = JSON.stringify(objParadigm);
-    console.log(JSON.parse(json));
-    response.write(json);
-    response.end();
   } catch (e) {
     console.error("NodeJS exception: %s", e.message);
   }
+}
+
+function paradigmQuery(inflectionId, response) {
+  response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
+
+  let objParadigm = {};
+
+  if (inflectionId in objInflectionToWordForms) {
+    objParadigm = objInflectionToWordForms[inflectionId];
+  } else {
+    generateParadigm(inflectionId, objParadigm);
+  }
+
+  var json = JSON.stringify(objParadigm);
+  console.log(JSON.parse(json));
+  response.write(json);
+  response.end();
 } // paradigmQuery()
 
 function wordParse(response) {
