@@ -217,6 +217,7 @@ function collectWordFormProperties(wordFormKey, objWordForm) {
   objWordForm.wordForm = zalWebObj.getWordFormProperty(wordFormKey, "wordForm");
 
   let subParadigm = zalWebObj.getWordFormProperty(wordFormKey, "subParadigm");
+  objWordForm.subParadigm = subParadigm;
 
   if (Declinables.includes(subParadigm)) {
     objWordForm.case = zalWebObj.getWordFormProperty(wordFormKey, "case");
