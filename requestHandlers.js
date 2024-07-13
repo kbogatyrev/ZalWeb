@@ -90,13 +90,19 @@ function* inflectionGenerator(lexemeId) {
 
 function* gramHashGenerator(inflectionId) {
   let idx = 0;
+  let lastGramHash = "";
   while (true) {
     let rc = zalWebObj.getGramHash(inflectionId, idx);
     if (rc === false) {
       return;
     }
-    yield rc;
     ++idx;
+    // dedupe
+    if (rc === lastGramHash) {
+      continue;
+    }
+    yield rc;
+    lastGramHash = rc;
   }
 }
 
@@ -221,7 +227,16 @@ function collectWordFormProperties(wordFormKey, objWordForm) {
   }
 
   if (ThreeGenders.includes(subParadigm)) {
-    objWordForm.gender = zalWebObj.getWordFormProperty(wordFormKey, "gender");
+    if ("ShortAdj" == subParadigm) {
+      if ("Singular" == objWordForm.number) {
+        objWordForm.gender = zalWebObj.getWordFormProperty(
+          wordFormKey,
+          "gender"
+        );
+      }
+    } else {
+      objWordForm.gender = zalWebObj.getWordFormProperty(wordFormKey, "gender");
+    }
   }
 
   if ("PresentTense" === subParadigm) {
@@ -230,7 +245,10 @@ function collectWordFormProperties(wordFormKey, objWordForm) {
 
   if (AnimRelevant.includes(subParadigm)) {
     if (Declinables.includes(subParadigm)) {
-      if ("Accusative" == wordForm.case && wordForm.gender != "Neuter") {
+      if (
+        "Accusative" == objWordForm.case &&
+        "Masculine" == objWordForm.gender
+      ) {
         objWordForm.animacy = zalWebObj.getWordFormProperty(
           wordFormKey,
           "animacy"
@@ -286,8 +304,8 @@ function generateParadigm(inflectionId, objParadigm) {
     while (!itGramHash.done) {
       const wordFormGen = wordFormGenerator(inflectionId, itGramHash.value);
       itWordFormKey = wordFormGen.next();
-      let objWordForm = {};
       while (!itWordFormKey.done) {
+        let objWordForm = {};
         collectWordFormProperties(itWordFormKey.value, objWordForm);
         listWordForms.push(objWordForm);
         itWordFormKey = wordFormGen.next();

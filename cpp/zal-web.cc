@@ -1161,6 +1161,12 @@ Napi::Value ZalWeb::GetWordForm(const Napi::CallbackInfo& info)
   if (m_mapKeyToWordFormObj.find(sKey) == m_mapKeyToWordFormObj.end()) {
     return Napi::Boolean::New(info.Env(), false); 
   }
+
+  auto spWf = m_mapKeyToWordFormObj[sKey];
+  Hlib::CEString sWordForm;
+  auto rc = spWf->eGetFormWithDiacritics(sWordForm);
+
+//  std::cout << Hlib::CEString::stl_sToUtf8(sKey) << ": " << Hlib::CEString::stl_sToUtf8(sWordForm) << "\n";
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sKey));
 
 }   //  GetWordForm()
