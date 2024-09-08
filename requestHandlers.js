@@ -266,6 +266,7 @@ function collectWordFormProperties(wordFormKey, objWordForm) {
   //            wordForm.reflexivity = zalWebObj.getWordFormProperty("reflexivity");
   //            wordForm.aspect = zalWebObj.getWordFormProperty("aspect");
   let status = zalWebObj.getWordFormProperty(wordFormKey, "status");
+  console.log(wordFormKey, "\t ", status);
   if (status && status !== "Common") {
     objWordForm.status = status;
   }
@@ -300,15 +301,30 @@ function generateParadigm(inflectionId, objParadigm) {
 
     listWordForms = [];
 
+    //    const regex = /^S+-S+-(d)/;
     const hashGen = gramHashGenerator(inflectionId);
     let itGramHash = hashGen.next();
     while (!itGramHash.done) {
       const wordFormGen = wordFormGenerator(inflectionId, itGramHash.value);
       itWordFormKey = wordFormGen.next();
+      let objWordForm = {};
       while (!itWordFormKey.done) {
-        let objWordForm = {};
+        captures = /^\S+-\S+-(\d)/.exec(itWordFormKey.value);
+        if (captures.length < 2) {
+          console.error(
+            "Failed to parse word form key: %s",
+            itWordFormKey.value
+          );
+        }
+        objWordForm = {};
         collectWordFormProperties(itWordFormKey.value, objWordForm);
-        listWordForms.push(objWordForm);
+        if (captures[1] == 0) {
+          listWordForms.push(objWordForm);
+        } else {
+          let last = listWordForms.pop();
+          last.wordForm += "/" + objWordForm.wordForm;
+          listWordForms.push(last);
+        }
         itWordFormKey = wordFormGen.next();
       }
       itGramHash = hashGen.next();
