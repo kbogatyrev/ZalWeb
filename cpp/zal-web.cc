@@ -496,7 +496,6 @@ fnHandlerWordForm fnIsVariant = [](const Napi::CallbackInfo& info, shared_ptr<Hl
 fnHandlerWordForm fnIsDifficult = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
 {
   const auto& sGramHash = spWordForm->sGramHash();
-  auto eStatus = spWordForm->pInflection()->eIsFormDifficult(sGramHash);
   auto bStatus = spWordForm->pInflection()->bIsFormDifficult(sGramHash);
   return Napi::Boolean::New(info.Env(), bStatus);
 };
