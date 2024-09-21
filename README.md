@@ -12,5 +12,6 @@ to build a Linux binary.
 -- Clone the Zal-Web repo from the GitHub: https://github.com/kbogatyrev/Zal-Web targeting a WSL Linux directory   
 -- Use VSC to open the Zal-Web directory as a CMake project or --   
 -- Open a WSL Ubuntu window and cd to Zal-Web   
--- Say **cmake-js** to build the NodeJS server   
--- Start the server by entering node **node index.js**   
+-- Say **cmake-js** to build the NodeJS server
+-- Edit the appropriate .toml file
+-- Start the server by entering node **node index.js zal-web_local.toml**   
