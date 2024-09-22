@@ -14,4 +14,4 @@ to build a Linux binary.
 -- Open a WSL Ubuntu window and cd to Zal-Web   
 -- Say **cmake-js** to build the NodeJS server   
 -- Edit the appropriate .toml file   
--- Start the server by entering node **node index.js zal-web_local.toml**   
+-- Start the server by entering **node index.js zal-web_local.toml**   
