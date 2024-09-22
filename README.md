@@ -2,7 +2,7 @@ Build the NodeJS server for Linux using Visual Studio 2022 (C++ core) and Visual
 to build a Linux binary.
 
 1. Build the core component on a Windows 10/11 platform with WSL targeting Linux   
--- Clone the Zal-Code repo from the GitHub: https://github.com/kbogatyrev/Zal-Core into a Windows folder   
+-- Clone the Zal-Core repo from the GitHub: https://github.com/kbogatyrev/Zal-Core into a Windows folder   
 -- Open the Zal-Core directory as a CMake project   
 -- Select **WSL:Ubuntu-...** connection as the target system and "Linux Debug" or "Linux Release" as the current configuration   
 -- Build the Linux Binary   
