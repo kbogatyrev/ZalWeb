@@ -217,7 +217,7 @@ class ZalWeb : public Napi::ObjectWrap<ZalWeb> {
 
     // Lexemes, inflections and word forms
     std::multimap<Hlib::CEString, int64_t> m_mmapWordToLexemeIds;
-    std::map<int64_t, ET_LexemeStatus> m_mapLexemeStatus;   // status --> lexemeId
+    std::map<int64_t, ET_LexemeStatus> m_mapLexemeStatus;   // lexemeId --> status
     std::multimap<int64_t, int64_t> m_mmapLexemeIdToInflectionIds;
     std::map<int64_t, shared_ptr<Hlib::CLexeme>> m_mapLexemeIdToLexemeObj;
     std::map<int64_t, bool> m_mapInflectionStatus;

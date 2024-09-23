@@ -65,7 +65,8 @@ fnHandlerLexeme fnSourceForm = [](const Napi::CallbackInfo& info, shared_ptr<Hli
   bool bIsVariant = false;
   auto rc = spLexeme->eGetSourceFormWithDiacritics(sSource, bIsVariant);
   if (rc != Hlib::H_NO_ERROR) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve source form.").ThrowAsJavaScriptException();
+      Napi::TypeError::New(info.Env(), "Failed to retrieve source form.").Message();
+
     return Napi::Boolean::New(info.Env(), false);
   }
 
@@ -115,7 +116,7 @@ fnHandlerLexeme fnPartOfSpeechLexeme = [](const Napi::CallbackInfo& info, shared
   auto ePos = spLexeme-> ePartOfSpeech();
   auto itPosString = MapPosToString.find(ePos);
   if (itPosString == MapPosToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve source part of speech value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve source part of speech value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itPosString->second);
@@ -346,6 +347,11 @@ fnHandlerInflection fnNoPassivePastParticiple = [](const Napi::CallbackInfo& inf
     return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bNoPassivePastParticiple);
 };
 
+fnHandlerInflection fnP2Preposition = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+    return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spInflection->stGetProperties().sP2Preposition));
+};
+
 // -------------------------------------------------------------------------------------------------------------------------------------------------
 
 fnHandlerWordForm fnWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
@@ -353,7 +359,7 @@ fnHandlerWordForm fnWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hli
   Hlib::CEString sWordForm;
   auto rc = spWordForm->eGetFormWithDiacritics(sWordForm);
   if (rc != Hlib::H_NO_ERROR) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve word form.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve word form.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sWordForm));
@@ -376,7 +382,7 @@ fnHandlerWordForm fnPartOfSpeech = [](const Napi::CallbackInfo& info, shared_ptr
   auto ePos = spWordForm->ePos();
   auto itPosString = MapPosToString.find(ePos);
   if (itPosString == MapPosToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve source part of speech value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve source part of speech value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itPosString->second);
@@ -387,7 +393,7 @@ fnHandlerWordForm fnCase = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::C
   auto eCase = spWordForm->eCase();
   auto itCaseString = MapCaseToString.find(eCase);
   if (itCaseString == MapCaseToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve case value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve case value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itCaseString->second);
@@ -398,7 +404,7 @@ fnHandlerWordForm fnSubParadigm = [](const Napi::CallbackInfo& info, shared_ptr<
   auto eSubparadigm = spWordForm->eSubparadigm();
   auto itSubparadigmString = MapSubparadigmToString.find(eSubparadigm);
   if (itSubparadigmString == MapSubparadigmToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve subparadigm value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve subparadigm value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itSubparadigmString->second);
@@ -409,7 +415,7 @@ fnHandlerWordForm fnNumber = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   auto eNumber = spWordForm->eNumber();
   auto itNumberString = MapNumberToString.find(eNumber);
   if (itNumberString == MapNumberToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve number value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve number value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itNumberString->second);
@@ -420,7 +426,7 @@ fnHandlerWordForm fnGender = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   auto eGender = spWordForm->eGender();
   auto itGenderString = MapGenderToString.find(eGender);
   if (itGenderString == MapGenderToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve gender value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve gender value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itGenderString->second);
@@ -431,7 +437,7 @@ fnHandlerWordForm fnPerson = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   auto ePerson = spWordForm->ePerson();
   auto itPersonString = MapPersonToString.find(ePerson);
   if (itPersonString == MapPersonToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve person value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve person value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itPersonString->second);
@@ -442,7 +448,7 @@ fnHandlerWordForm fnAnimacy = [](const Napi::CallbackInfo& info, shared_ptr<Hlib
   auto eAnimacy = spWordForm->eAnimacy();
   auto itAnimacyString = MapAnimacyToString.find(eAnimacy);
   if (itAnimacyString == MapAnimacyToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve animacy value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve animacy value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itAnimacyString->second);
@@ -454,7 +460,7 @@ fnHandlerWordForm fnReflexivity = [](const Napi::CallbackInfo& info, shared_ptr<
   auto eReflexivity = spWordForm->eReflexive();
   auto itReflexivityString = MapReflexivityToString.find(eReflexivity);
   if (itReflexivityString == MapReflexivityToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve reflexivity value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve reflexivity value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itReflexivityString->second);
@@ -465,7 +471,7 @@ fnHandlerWordForm fnAspect = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   auto eAspect = spWordForm->eAspect();
   auto itAspectString = MapAspectToString.find(eAspect);
   if (itAspectString == MapAspectToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve aspect value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve aspect value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itAspectString->second);
@@ -477,7 +483,7 @@ fnHandlerWordForm fnStatus = [](const Napi::CallbackInfo& info, shared_ptr<Hlib:
   auto eStatus = spWordForm->eStatus();
   auto itStatusString = MapStatusToString.find(eStatus);
   if (itStatusString == MapStatusToString.end()) {
-    Napi::TypeError::New(info.Env(), "Failed to retrieve status value.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Failed to retrieve status value.").Message();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::String::New(info.Env(), itStatusString->second);
@@ -551,7 +557,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
 //  Napi::Env env = info.Env();
 //  int length = info.Length();
 //  if (length <= 0 || !info[0].IsNumber()) {
-//    Napi::TypeError::New(env, "Number expected").ThrowAsJavaScriptException();
+//    Napi::TypeError::New(info.Env(), "Failed to retrieve number value.").Message();
 //    return;
 //  }
 
@@ -562,7 +568,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   auto rc = pSingleton->eGetDictionary(m_spDictionary);
   if (rc != Hlib::H_NO_ERROR)
   {
-      Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.").ThrowAsJavaScriptException();
+    Napi::TypeError::New(info.Env(), "Error getting dictionary pointer.").ThrowAsJavaScriptException();
   }
 
 //  Hlib::CEString sDbPath = L"/home/konstantin/Zal-Web/data/ZalData_Master.db3";
@@ -571,7 +577,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
 //  rc = m_spDictionary->eGetAnalytics(m_spAnalytics);
 //  if (rc != Hlib::H_NO_ERROR || !m_spAnalytics)
 //  {
-//      Napi::TypeError::New(info.Env(), "Error accessing analytics module.").ThrowAsJavaScriptException();
+//    Napi::TypeError::New(info.Env(), "Failed to retrieve number value.").Message();
 //  }
 
   m_mapKeyToLexemePropHandler["lexemeId"] = fnLexemeId;
@@ -616,6 +622,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToInflectionPropHandler["shortFormsIncomplete"] = fnShortFormsIncomplete;
   m_mapKeyToInflectionPropHandler["pastParticipleRestricted"] = fnPastParticipleRestricted;
   m_mapKeyToInflectionPropHandler["noPassivePastParticiple"] = fnNoPassivePastParticiple;
+  m_mapKeyToInflectionPropHandler["p2Preposition"] = fnP2Preposition;
 
   m_mapKeyToWordFormPropHandler["wordForm"] = fnWordForm;
 //  m_mapKeyToWordFormPropHandler["stem"] = fnStem;
@@ -687,6 +694,7 @@ bool ZalWeb::bLoadInflections(const Napi::CallbackInfo& info, std::shared_ptr<Hl
   rc = m_spInflectionEnumerator->eGetFirstInflection(spInflection);
   if (!spInflection || rc != Hlib::H_NO_ERROR)
   {
+    Napi::TypeError::New(info.Env(), "Failed to retrieve number value.").Message();
     Napi::TypeError::New(info.Env(), "Unable to enumerate inflections.").ThrowAsJavaScriptException();
     return false;
   }
@@ -714,7 +722,8 @@ Napi::Value ZalWeb::WordQuery(const Napi::CallbackInfo& info)
     }
 
     if (!info[0].IsString()) {
-       Napi::TypeError::New(env, "Did not receive search word.").ThrowAsJavaScriptException();
+      Napi::TypeError::New(info.Env(), "Failed to retrieve number value.").Message();
+        Napi::TypeError::New(env, "Did not receive search word.").ThrowAsJavaScriptException();
       return Napi::Boolean::New(info.Env(), false);
     }
 
@@ -730,7 +739,7 @@ Napi::Value ZalWeb::WordQuery(const Napi::CallbackInfo& info)
 
     auto rc = m_spDictionary->eGetLexemesByInitialForm(sSearchWord);
     if (rc != Hlib::H_NO_MORE && rc != Hlib::H_FALSE) {
-       Napi::TypeError::New(env, "Lexeme lookup failed.").ThrowAsJavaScriptException();
+      Napi::TypeError::New(info.Env(), "Lexeme lookup failed.").Message();
     }
 
     if (Hlib::H_FALSE == rc) {
@@ -747,8 +756,7 @@ Napi::Value ZalWeb::WordQuery(const Napi::CallbackInfo& info)
     std::shared_ptr<Hlib::CLexeme> spLexeme;
     rc = m_spLexemeEnumerator->eGetFirstLexeme(spLexeme);
     if (rc != Hlib::H_NO_ERROR || nullptr == spLexeme) {
-        Napi::TypeError::New(info.Env(), "Unable to load first lexeme.")
-            .ThrowAsJavaScriptException();
+        Napi::TypeError::New(info.Env(), "Unable to load first lexeme.").Message();
         return Napi::Boolean::New(info.Env(), false);
     }
     while (Hlib::H_NO_ERROR == rc && spLexeme != nullptr) {
@@ -760,8 +768,7 @@ Napi::Value ZalWeb::WordQuery(const Napi::CallbackInfo& info)
       m_mapLexemeStatus.insert(make_pair(spLexeme->llLexemeId(), ET_LexemeStatus::LexemeStatusNew));
       rc = m_spLexemeEnumerator->eGetNextLexeme(spLexeme);
       if (rc != Hlib::H_NO_ERROR && rc != Hlib::H_NO_MORE) {
-        Napi::TypeError::New(info.Env(), "Unable to acquire lexeme.")
-            .ThrowAsJavaScriptException();
+        Napi::TypeError::New(info.Env(), "Unable to acquire lexeme.").Message();
         return Napi::Boolean::New(info.Env(), false);
       }
     }

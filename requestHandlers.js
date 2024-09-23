@@ -121,99 +121,112 @@ function* wordFormGenerator(inflectionId, gramHash) {
 //
 //  Lexeme + inflections
 //
-
 function wordQuery(searchString, response) {
-  zalWebObj.clear();
+  try {
+    zalWebObj.clear();
 
-  // Load lexeme ID's and inflection ID's
-  const rc = zalWebObj.wordQuery(searchString);
-  const lexGen = lexemeIdGenerator();
-  let itLexemeId = lexGen.next();
-  while (!itLexemeId.done) {
-    let lexeme = {};
-    lexeme["lexemeId"] = itLexemeId.value;
-    lexeme["sourceForm"] = zalWebObj.getLexemeProperty(
-      itLexemeId.value,
-      "sourceForm"
-    );
-    lexeme["mainSymbol"] = zalWebObj.getLexemeProperty(
-      itLexemeId.value,
-      "mainSymbol"
-    );
-    lexeme["partOfSpeech"] = zalWebObj.getLexemeProperty(
-      itLexemeId.value,
-      "partOfSpeech"
-    );
-    if ("Verb" == lexeme[(itLexemeId, "partOfSpeech")]) {
-      lexeme.isTransitive = zalWebObj.getLexemeProperty(
+    // Load lexeme ID's and inflection ID's
+    const rc = zalWebObj.wordQuery(searchString);
+    const lexGen = lexemeIdGenerator();
+    let itLexemeId = lexGen.next();
+    while (!itLexemeId.done) {
+      console.log(itLexemeId.value);
+      let lexeme = {};
+      lexeme["lexemeId"] = itLexemeId.value;
+      lexeme["sourceForm"] = zalWebObj.getLexemeProperty(
         itLexemeId.value,
-        "isTransitive"
+        "sourceForm"
       );
-    }
-    let spryazhSm = zalWebObj.getLexemeProperty(itLexemeId.value, "spryazhSm");
-    if (spryazhSm) {
-      lexeme["spryazhSmRef"] = zalWebObj.getLexemeProperty(
-        itLexemeId.value,
-        "spryazhSmRef"
-      );
-    }
-    section = zalWebObj.getLexemeProperty(itLexemeId.value, "section");
-    if (section >= 1) {
-      lexeme["section"] = zalWebObj.getLexemeProperty(
-        itLexemeId.value,
-        "section"
-      );
-    }
-
-    lexeme["inflections"] = [];
-    const iGen = inflectionGenerator(itLexemeId.value);
-    let itInflectionId = iGen.next();
-    while (!itInflectionId.done) {
-      let inflection = {};
-      inflection["inflectionId"] = itInflectionId.value;
-      inflection["inflectionType"] = zalWebObj.getInflectionProperty(
-        itInflectionId.value,
-        "inflectionType"
-      );
-      inflection["accentType1"] = zalWebObj.getInflectionProperty(
-        itInflectionId.value,
-        "accentType1"
-      );
-      let at2 = zalWebObj.getInflectionProperty(
-        itInflectionId.value,
-        "accentType2"
-      );
-      if (at2) {
-        inflection["accentType2"] = at2;
+      homonyms = zalWebObj.getLexemeProperty(itLexemeId.value, "homonyms");
+      if (homonyms) {
+        lexeme["homonyms"] = homonyms;
       }
-      if ("Verb" === lexeme["partOfSpeech"]) {
-        inflection["aspectPair"] = zalWebObj.getInflectionProperty(
-          itInflectionId.value,
-          "aspectPair"
+
+      lexeme["mainSymbol"] = zalWebObj.getLexemeProperty(
+        itLexemeId.value,
+        "mainSymbol"
+      );
+      lexeme["partOfSpeech"] = zalWebObj.getLexemeProperty(
+        itLexemeId.value,
+        "partOfSpeech"
+      );
+      if ("Verb" == lexeme[(itLexemeId, "partOfSpeech")]) {
+        lexeme.isTransitive = zalWebObj.getLexemeProperty(
+          itLexemeId.value,
+          "isTransitive"
         );
       }
-      lexeme["inflections"].push(inflection);
-      itInflectionId = iGen.next();
+      let spryazhSm = zalWebObj.getLexemeProperty(
+        itLexemeId.value,
+        "spryazhSm"
+      );
+      if (spryazhSm) {
+        lexeme["spryazhSmRef"] = zalWebObj.getLexemeProperty(
+          itLexemeId.value,
+          "spryazhSmRef"
+        );
+      }
+      section = zalWebObj.getLexemeProperty(itLexemeId.value, "section");
+      if (section >= 1) {
+        lexeme["section"] = zalWebObj.getLexemeProperty(
+          itLexemeId.value,
+          "section"
+        );
+      }
+
+      lexeme["inflections"] = [];
+      const iGen = inflectionGenerator(itLexemeId.value);
+      let itInflectionId = iGen.next();
+      while (!itInflectionId.done) {
+        let inflection = {};
+        inflection["inflectionId"] = itInflectionId.value;
+        inflection["inflectionType"] = zalWebObj.getInflectionProperty(
+          itInflectionId.value,
+          "inflectionType"
+        );
+        inflection["accentType1"] = zalWebObj.getInflectionProperty(
+          itInflectionId.value,
+          "accentType1"
+        );
+        let at2 = zalWebObj.getInflectionProperty(
+          itInflectionId.value,
+          "accentType2"
+        );
+        if (at2) {
+          inflection["accentType2"] = at2;
+        }
+        if ("Verb" === lexeme["partOfSpeech"]) {
+          inflection["aspectPair"] = zalWebObj.getInflectionProperty(
+            itInflectionId.value,
+            "aspectPair"
+          );
+        }
+
+        lexeme["inflections"].push(inflection);
+        itInflectionId = iGen.next();
+      }
+      listLexemes.push(lexeme);
+      itLexemeId = lexGen.next();
     }
-    listLexemes.push(lexeme);
-    itLexemeId = lexGen.next();
+  } catch (err) {
+    console.log(err);
+    json = "{}";
   }
-
-  // Get lexemes' properties
-  //  console.log(JSON.stringify(listLexemes));
-
   response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
   var json = JSON.stringify(listLexemes);
   listLexemes.length = 0;
   console.log(JSON.parse(json));
   response.write(json);
   response.end();
+
+  // Get lexemes' properties
+  //  console.log(JSON.stringify(listLexemes));
 } // wordQuery()
 
 //
 //  Paradigm
 //
-function collectWordFormProperties(wordFormKey, objWordForm) {
+function collectWordFormProperties(inflectionId, wordFormKey, objWordForm) {
   objWordForm.wordForm = zalWebObj.getWordFormProperty(wordFormKey, "wordForm");
 
   let subParadigm = zalWebObj.getWordFormProperty(wordFormKey, "subParadigm");
@@ -221,6 +234,15 @@ function collectWordFormProperties(wordFormKey, objWordForm) {
 
   if (Declinables.includes(subParadigm)) {
     objWordForm.case = zalWebObj.getWordFormProperty(wordFormKey, "case");
+    if (objWordForm.case == "Locative") {
+      p2Preposition = zalWebObj.getInflectionProperty(
+        inflectionId,
+        "p2Preposition"
+      );
+      if (p2Preposition) {
+        objWordForm.p2Preposition = p2Preposition;
+      }
+    }
   }
 
   if (SingularPlural.includes(subParadigm)) {
@@ -317,7 +339,11 @@ function generateParadigm(inflectionId, objParadigm) {
           );
         }
         objWordForm = {};
-        collectWordFormProperties(itWordFormKey.value, objWordForm);
+        collectWordFormProperties(
+          inflectionId,
+          itWordFormKey.value,
+          objWordForm
+        );
         if (captures[1] == 0) {
           listWordForms.push(objWordForm);
         } else {

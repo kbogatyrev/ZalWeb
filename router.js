@@ -15,9 +15,17 @@ function route(handle, pathname, params, response) {
 
   switch (pathname) {
     case "/query":
+      //      try {
       const word = searchParams.get("word");
       console.log("Word search: " + word);
       handle[pathname](word, response);
+      //      } catch (err) {
+      //console.log("**************", err);
+      //        response.writeHead(404, { "Content-Type": "text/json; charset=utf-8" });
+      //        var json = "{}";
+      //        response.write(json);
+      //        response.end();
+      //      }
       break;
     case "/forms":
       const inflectionId = parseInt(searchParams.get("inflection-id"), 10);
