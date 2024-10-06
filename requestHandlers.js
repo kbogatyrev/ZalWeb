@@ -54,7 +54,7 @@ const AnimRelevant = [
 ];
 
 const listLexemes = [];
-const objParadigm = {};
+let objParadigm = {};
 const objInflectionToWordForms = {};
 
 //class Inflection {}
