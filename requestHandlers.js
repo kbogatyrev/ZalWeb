@@ -54,7 +54,6 @@ const AnimRelevant = [
 ];
 
 const listLexemes = [];
-let objParadigm = {};
 const objInflectionToWordForms = {};
 
 //class Inflection {}
@@ -201,6 +200,7 @@ function wordQuery(searchString, response) {
         if (itInflectionId.value in objInflectionToWordForms) {
           objParadigm = objInflectionToWordForms[itInflectionId.value];
         } else {
+          objParadigm = {};
           generateParadigm(itInflectionId.value, objParadigm);
         }
 
@@ -410,16 +410,17 @@ function generateParadigm(inflectionId, objParadigm) {
 function paradigmQuery(inflectionId, response) {
   response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
 
-  //  if (inflectionId in objInflectionToWordForms) {
-  //    objParadigm = objInflectionToWordForms[inflectionId];
-  //  } else {
-  //    generateParadigm(inflectionId, objParadigm);
-  //  }
+  if (inflectionId in objInflectionToWordForms) {
+    objParadigm = objInflectionToWordForms[inflectionId];
 
-  var json = JSON.stringify(objParadigm);
-  console.log(JSON.parse(json));
-  response.write(json);
-  response.end();
+    var json = JSON.stringify(objParadigm);
+    console.log(JSON.parse(json));
+    response.write(json);
+    response.end();
+  } else {
+    response.write("{}");
+    response.end();
+  }
 } // paradigmQuery()
 
 function wordParse(response) {
