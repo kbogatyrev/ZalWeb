@@ -293,7 +293,8 @@ fnHandlerInflection fnAltAspectPair = [](const Napi::CallbackInfo& info, shared_
   Hlib::CEString sAltAspectPair;
   int iStressPos = -1;
   auto rc = spInflection->eGetAltAspectPair(sAltAspectPair, iStressPos);
-  if (Hlib::H_NO_ERROR == rc) {
+  if (Hlib::H_NO_ERROR == rc && sAltAspectPair.uiLength() > 0) {
+    sAltAspectPair.sInsert(iStressPos, Hlib::CEString::g_chrCombiningAcuteAccent);
     return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(sAltAspectPair));
   } else {
     return Napi::Boolean::New(info.Env(), false);    

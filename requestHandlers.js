@@ -54,6 +54,7 @@ const AnimRelevant = [
 ];
 
 const listLexemes = [];
+const objParadigm = {};
 const objInflectionToWordForms = {};
 
 //class Inflection {}
@@ -130,7 +131,7 @@ function wordQuery(searchString, response) {
     const lexGen = lexemeIdGenerator();
     let itLexemeId = lexGen.next();
     while (!itLexemeId.done) {
-      console.log(itLexemeId.value);
+      //      console.log(itLexemeId.value);
       let lexeme = {};
       lexeme["lexemeId"] = itLexemeId.value;
       lexeme["sourceForm"] = zalWebObj.getLexemeProperty(
@@ -184,6 +185,7 @@ function wordQuery(searchString, response) {
           itInflectionId.value,
           "inflectionType"
         );
+
         inflection["accentType1"] = zalWebObj.getInflectionProperty(
           itInflectionId.value,
           "accentType1"
@@ -195,11 +197,33 @@ function wordQuery(searchString, response) {
         if (at2) {
           inflection["accentType2"] = at2;
         }
+
+        if (itInflectionId.value in objInflectionToWordForms) {
+          objParadigm = objInflectionToWordForms[itInflectionId.value];
+        } else {
+          generateParadigm(itInflectionId.value, objParadigm);
+        }
+
+        aspectPairs = [];
         if ("Verb" === lexeme["partOfSpeech"]) {
-          inflection["aspectPair"] = zalWebObj.getInflectionProperty(
+          aspectPair = zalWebObj.getInflectionProperty(
             itInflectionId.value,
             "aspectPair"
           );
+          if (aspectPair.length > 0) {
+            aspectPairs.push(aspectPair);
+          }
+
+          altAspectPair = zalWebObj.getInflectionProperty(
+            itInflectionId.value,
+            "altAspectPair"
+          );
+          if (altAspectPair.length > 0) {
+            aspectPairs.push(altAspectPair);
+          }
+          if (aspectPairs.length > 0) {
+            inflection["aspectPairs"] = aspectPairs;
+          }
         }
 
         lexeme["inflections"].push(inflection);
@@ -228,7 +252,6 @@ function wordQuery(searchString, response) {
 //
 function collectWordFormProperties(inflectionId, wordFormKey, objWordForm) {
   objWordForm.wordForm = zalWebObj.getWordFormProperty(wordFormKey, "wordForm");
-
   let subParadigm = zalWebObj.getWordFormProperty(wordFormKey, "subParadigm");
   objWordForm.subParadigm = subParadigm;
 
@@ -288,7 +311,7 @@ function collectWordFormProperties(inflectionId, wordFormKey, objWordForm) {
   //            wordForm.reflexivity = zalWebObj.getWordFormProperty("reflexivity");
   //            wordForm.aspect = zalWebObj.getWordFormProperty("aspect");
   let status = zalWebObj.getWordFormProperty(wordFormKey, "status");
-  console.log(wordFormKey, "\t ", status);
+  //console.log(wordFormKey, "\t ", status);
   if (status && status !== "Common") {
     objWordForm.status = status;
   }
@@ -387,13 +410,11 @@ function generateParadigm(inflectionId, objParadigm) {
 function paradigmQuery(inflectionId, response) {
   response.writeHead(200, { "Content-Type": "text/json; charset=utf-8" });
 
-  let objParadigm = {};
-
-  if (inflectionId in objInflectionToWordForms) {
-    objParadigm = objInflectionToWordForms[inflectionId];
-  } else {
-    generateParadigm(inflectionId, objParadigm);
-  }
+  //  if (inflectionId in objInflectionToWordForms) {
+  //    objParadigm = objInflectionToWordForms[inflectionId];
+  //  } else {
+  //    generateParadigm(inflectionId, objParadigm);
+  //  }
 
   var json = JSON.stringify(objParadigm);
   console.log(JSON.parse(json));
