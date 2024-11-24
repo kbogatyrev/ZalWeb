@@ -265,6 +265,10 @@ function collectWordFormProperties(inflectionId, wordFormKey, objWordForm) {
       if (p2Preposition) {
         objWordForm.p2Preposition = p2Preposition;
       }
+      p2Optional = zalWebObj.getInflectionProperty(inflectionId, "p2Optional");
+      if (p2Optional) {
+        objWordForm.optional = "True";
+      }
     }
   }
 

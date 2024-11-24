@@ -353,6 +353,12 @@ fnHandlerInflection fnP2Preposition = [](const Napi::CallbackInfo& info, shared_
     return Napi::String::New(info.Env(), Hlib::CEString::stl_sToUtf8(spInflection->stGetProperties().sP2Preposition));
 };
 
+fnHandlerInflection fnP2Optional = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CInflection> spInflection) -> Napi::Value 
+{
+    return Napi::Boolean::New(info.Env(), spInflection->stGetProperties().bSecondPrepositionalOptional);
+};
+
+
 // -------------------------------------------------------------------------------------------------------------------------------------------------
 
 fnHandlerWordForm fnWordForm = [](const Napi::CallbackInfo& info, shared_ptr<Hlib::CWordForm> spWordForm) -> Napi::Value
@@ -624,6 +630,7 @@ ZalWeb::ZalWeb(const Napi::CallbackInfo& info) : Napi::ObjectWrap<ZalWeb>(info)
   m_mapKeyToInflectionPropHandler["pastParticipleRestricted"] = fnPastParticipleRestricted;
   m_mapKeyToInflectionPropHandler["noPassivePastParticiple"] = fnNoPassivePastParticiple;
   m_mapKeyToInflectionPropHandler["p2Preposition"] = fnP2Preposition;
+  m_mapKeyToInflectionPropHandler["p2Optional"] = fnP2Optional;
 
   m_mapKeyToWordFormPropHandler["wordForm"] = fnWordForm;
 //  m_mapKeyToWordFormPropHandler["stem"] = fnStem;
