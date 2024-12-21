@@ -1091,16 +1091,19 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
     return Napi::Boolean::New(info.Env(), false);
   }
 
+  // Hack: gram hash is modified to distinguish between animate and inanimate m. acc.
+  // long adjectives
   while (Hlib::H_NO_ERROR == rc) {
-    m_mmapInflectionIdToGramHash.emplace(make_pair(spInflection->llInflectionId(), spWf->sGramHash()));
-    auto itCount = m_mapGramHashToFormCount.find(spWf->sGramHash());
+    auto&& sGramHash = spWf->sGramHash();
+    m_mmapInflectionIdToGramHash.emplace(make_pair(spInflection->llInflectionId(), sGramHash));
+    auto itCount = m_mapGramHashToFormCount.find(sGramHash);
     if (m_mapGramHashToFormCount.end() == itCount) {
-      m_mapGramHashToFormCount[spWf->sGramHash()] = 0;
+      m_mapGramHashToFormCount[sGramHash] = 0;
     }
-    auto iIdx = m_mapGramHashToFormCount[spWf->sGramHash()];
-    m_mapGramHashToFormCount[spWf->sGramHash()] = iIdx + 1;
+    auto iIdx = m_mapGramHashToFormCount[sGramHash];
+    m_mapGramHashToFormCount[sGramHash] = iIdx + 1;
     auto sIdx = Hlib::CEString::sToString(iIdx);
-    auto sKey = Hlib::CEString::sToString(spInflection->llInflectionId()) + L"-" + spWf->sGramHash() + L"-" + sIdx;   
+    auto sKey = Hlib::CEString::sToString(spInflection->llInflectionId()) + L"-" + sGramHash + L"-" + sIdx;   
     m_mapKeyToWordFormObj.emplace(make_pair(sKey, spWf));
     rc = spInflection->eGetNextWordForm(spWf);
     if (rc != Hlib::H_NO_ERROR && rc != Hlib::H_FALSE && rc != Hlib::H_NO_MORE) {
@@ -1108,6 +1111,7 @@ Napi::Value ZalWeb::GenerateParadigm(const Napi::CallbackInfo& info)
       return Napi::Boolean::New(info.Env(), false);
     }
   }
+
   return Napi::Boolean::New(info.Env(), true);
 
 }   // GenerateParadigm()

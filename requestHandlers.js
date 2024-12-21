@@ -297,7 +297,7 @@ function collectWordFormProperties(inflectionId, wordFormKey, objWordForm) {
     if (Declinables.includes(subParadigm)) {
       if (
         "Accusative" == objWordForm.case &&
-        "Masculine" == objWordForm.gender
+        ("Plural" == objWordForm.number || "Masculine" == objWordForm.gender)
       ) {
         objWordForm.animacy = zalWebObj.getWordFormProperty(
           wordFormKey,
