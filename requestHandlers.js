@@ -58,6 +58,8 @@ const objInflectionToWordForms = {};
 
 //class Inflection {}
 
+const db = require("./db-handler");
+
 // -----------------------------------------------------
 
 function setDbPath(path) {
@@ -434,7 +436,13 @@ function wordParse(response) {
   response.end();
 }
 
-function Word(
+function insertPropNoun(body, response) {
+  console.log("Request handler 'insertPropNoun' was called.");
+  console.log("JSON: " + body);
+  //  db.insertPropNoun(body);
+}
+
+function word(
   incompleteParse,
   lineBreak,
   segmentId,
@@ -453,7 +461,7 @@ function Word(
 function formatSegment(segNum, segObj, text) {
   try {
     for (let at = 0; at < segObj.segmentSize(segNum); ++at) {
-      const word = new Word(
+      const word = new word(
         segObj.getWordInTextProperty(segNum, at, "incompleteParse"),
         segObj.getWordInTextProperty(segNum, at, "lineBreak"),
         segObj.getWordInTextProperty(segNum, at, "segmentId"),
@@ -498,9 +506,9 @@ function textQuery(start_id, size, response) {
 const addon = require("bindings")("zal-web.node");
 const zalWebObj = new addon.ZalWeb();
 
-//const sDbPath = "/home/konstantin/Zal-Web/data/ZalData_Master.db3";
 exports.setDbPath = setDbPath;
 exports.wordQuery = wordQuery;
 exports.paradigmQuery = paradigmQuery;
 //exports.wordParse = wordParse;
 exports.textQuery = textQuery;
+exports.insertPropNoun = insertPropNoun;

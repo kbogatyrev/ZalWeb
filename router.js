@@ -1,13 +1,13 @@
 //    https://www.zalizniak.com/query?word=баба
 
-function route(handle, pathname, params, response) {
+function route(handle, pathname, params, body, response) {
   console.log("About to route request for " + pathname);
 
   if (typeof handle[pathname] !== "function") {
     console.log("No request handler found for " + pathname);
-    response.writeHead(404, { "Content-Type": "text/plain" });
-    response.write("404 Not found");
-    response.end();
+    //    response.writeHead(404, { "Content-Type": "text/plain" });
+    //    response.write("404 Not found");
+    //    response.end();
     return;
   }
 
@@ -33,11 +33,18 @@ function route(handle, pathname, params, response) {
       break;
     case "/parse":
       break;
+    case "/insertPropNoun":
+      handle[pathname](body, response);
+      break;
     case "/text":
       const start_idx = parseInt(searchParams.get("start-idx"), 10);
       const size = parseInt(searchParams.get("size"), 10);
       handle[pathname](start_idx, size, response);
       break;
+    case "/favicon.ico":
+      console.log("routing path = " + pathname);
+      break;
+
     default:
       console.log("No request handler found for " + pathname);
       response.writeHead(404, { "Content-Type": "text/plain" });

@@ -11,4 +11,4 @@ protocol = "http"
 port = "8088"
 
 [misc]
-allow_origin = "http://localhost:3000"
+#allow_origin = "http://localhost:5173"
